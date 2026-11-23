@@ -1,1 +1,4 @@
 .DS_Store
+
+# Excel/Office temporary lock files (created while a spreadsheet is open)
+~$*
