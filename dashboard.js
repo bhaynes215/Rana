@@ -30,9 +30,19 @@ async function main() {
   document.getElementById("vitals-tier").textContent = state.tier;
   document.getElementById("level-text").textContent = `LV ${state.level}`;
 
+  // Tier glow: styles.css gives each tier its own glow color, keyed off
+  // this data-tier attribute, so the color changes as you tier up.
+  document.querySelector(".vitals-id").dataset.tier = state.tier;
+
+  // Earned title (e.g. "The Unbroken") under the name, only once earned.
+  const titleEl = document.getElementById("vitals-title");
+  titleEl.textContent = state.title || "";
+  titleEl.hidden = !state.title;
+
+  // XP progress through the current level, not lifetime totals.
   document.getElementById("xp-text").textContent =
-    `${state.xp} / ${state.xpNeed} XP TO LV ${state.level + 1}`;
-  renderSegments(document.getElementById("xp-bar"), segmentsFor(state.xp, state.xpNeed));
+    `${state.xpIntoLevel} / ${state.xpLevelSpan} XP TO LV ${state.level + 1}`;
+  renderSegments(document.getElementById("xp-bar"), segmentsFor(state.xpIntoLevel, state.xpLevelSpan));
 
   const recoveryText = document.getElementById("recovery-text");
   const recoveryBar = document.getElementById("recovery-bar");
@@ -140,7 +150,8 @@ async function main() {
   });
 
   // --- Footer ---
-  document.getElementById("footer-consistency").textContent = `${state.consistencyDays} days`;
+  document.getElementById("footer-consistency").textContent =
+    `${state.streak} ${state.streak === 1 ? "session" : "sessions"}`;
   document.getElementById("footer-logged").textContent = state.sessionsLogged;
   document.getElementById("footer-next").textContent = state.nextTier;
 }

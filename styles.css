@@ -581,26 +581,159 @@ fieldset label input[type="checkbox"] {
   display: none;
 }
 
-.tier-up-modal {
+/* ---- Tier glow colors ----
+   Each tier has its own color, set as --tier-color on anything carrying a
+   data-tier attribute (the dashboard's name block, the tier-up card).
+   Glow is done with box-shadow / text-shadow, never a blur filter (PRD
+   section 10). Spark keeps the app's base cyan. */
+
+[data-tier="SPARK"]        { --tier-color: #3fe9ff; --tier-glow: rgba(63, 233, 255, 0.45); }
+[data-tier="IGNITION"]     { --tier-color: #ff9f43; --tier-glow: rgba(255, 159, 67, 0.45); }
+[data-tier="AWAKENED"]     { --tier-color: #ffd447; --tier-glow: rgba(255, 212, 71, 0.45); }
+[data-tier="ASCENDED"]     { --tier-color: #5b8cff; --tier-glow: rgba(91, 140, 255, 0.5); }
+[data-tier="TRANSCENDENT"] { --tier-color: #a46bff; --tier-glow: rgba(164, 107, 255, 0.5); }
+[data-tier="MYTHIC"]       { --tier-color: #ff6ad5; --tier-glow: rgba(255, 106, 213, 0.55); }
+
+/* ---- Level-up / tier-up "title card" ----
+   The sequence: the backdrop dims in, a thin line sweeps across, then the
+   level number (or tier name) slams in from oversized, and the "what
+   powered this" line and button fade in after. */
+
+.title-card {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  padding: 32px 20px 20px;
   text-align: center;
-  border-color: var(--tier-violet);
-  box-shadow: 0 0 40px rgba(164, 107, 255, 0.4);
+  background-color: var(--panel-raised);
+  border: 1px solid var(--tier-color, var(--system-cyan));
+  box-shadow: 0 0 40px var(--tier-glow, rgba(63, 233, 255, 0.35));
+  clip-path: polygon(var(--notch) 0, 100% 0, 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, 0 100%, 0 var(--notch));
+  overflow: hidden;
 }
 
-.tier-up-label {
-  color: var(--tier-violet);
+.title-card-sweep {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--tier-color, var(--system-cyan));
+  box-shadow: 0 0 12px var(--tier-color, var(--system-cyan));
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0;
+}
+
+.title-card-label {
+  margin: 0;
+  font-family: var(--font-display);
   font-size: 0.8rem;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.25em;
+  color: var(--tier-color, var(--system-cyan));
 }
 
-.tier-up-name {
-  font-size: 2rem;
-  margin: 8px 0;
+.title-card-value {
+  margin: 8px 0 4px;
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--tier-color, var(--system-cyan));
+  text-shadow: 0 0 18px var(--tier-glow, rgba(63, 233, 255, 0.5));
+}
+
+.title-card-sub {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--text);
+}
+
+.title-card-powered {
+  min-height: 1.5em;
+  margin: 12px 0 20px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* Animations (only when the backdrop is visible). */
+.title-card-backdrop:not([hidden]) {
+  animation: title-card-dim 0.3s ease-out both;
+}
+.title-card-backdrop:not([hidden]) .title-card-sweep {
+  animation: title-card-sweep 0.7s ease-in-out 0.15s both;
+}
+.title-card-backdrop:not([hidden]) .title-card-label {
+  animation: title-card-fade 0.3s ease-out 0.4s both;
+}
+.title-card-backdrop:not([hidden]) .title-card-value {
+  animation: title-card-slam 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.6s both;
+}
+.title-card-backdrop:not([hidden]) .title-card-sub,
+.title-card-backdrop:not([hidden]) .title-card-powered,
+.title-card-backdrop:not([hidden]) .btn-continue {
+  animation: title-card-fade 0.4s ease-out 1.05s both;
+}
+
+@keyframes title-card-dim {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes title-card-sweep {
+  0%   { transform: scaleX(0); opacity: 1; }
+  60%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes title-card-slam {
+  from { transform: scale(2.2); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes title-card-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* People who've asked their device for less motion get the same card,
+   just already in its final state. */
+@media (prefers-reduced-motion: reduce) {
+  .title-card-backdrop:not([hidden]),
+  .title-card-backdrop:not([hidden]) * {
+    animation: none !important;
+  }
+}
+
+/* ---- Session complete: XP breakdown + earned title ---- */
+
+.xp-breakdown {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+}
+
+.xp-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+.xp-breakdown li .num {
+  color: var(--system-cyan);
+  white-space: nowrap;
+}
+
+.xp-breakdown .xp-breakdown-note {
+  display: block;
+  color: var(--text-dim);
+}
+
+.title-earned {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-left: 2px solid var(--tier-violet);
+  font-family: var(--font-display);
   color: var(--tier-violet);
-}
-
-.level-up-modal {
-  text-align: center;
 }
 
 /* ---- Dashboard: vitals bar (persistent chrome, pinned to the top) ---- */
@@ -628,6 +761,27 @@ fieldset label input[type="checkbox"] {
 
 .vitals-name {
   font-size: 1.05rem;
+}
+
+/* The name block takes on the current tier's glow color (data-tier is
+   set by dashboard.js). */
+.vitals-id[data-tier] {
+  padding-left: 10px;
+  border-left: 2px solid var(--tier-color);
+}
+.vitals-id[data-tier] .vitals-name {
+  text-shadow: 0 0 12px var(--tier-glow);
+}
+.vitals-id[data-tier] .hud-tier {
+  color: var(--tier-color);
+}
+
+/* Earned title under the name, e.g. "The Unbroken". */
+.vitals-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-dim);
 }
 
 .vitals-meter {

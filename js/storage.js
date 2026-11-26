@@ -35,26 +35,24 @@ Rana.storage = (() => {
     }
   }
 
-  // Matches the PRD's results-screen mockup numbers (section 9) and the
-  // dashboard mockup's own "Day 1 — nothing logged" toggle state, so the
-  // two design references stay consistent with each other.
+  // The dashboard mockup's "Day 1 — nothing logged" state, updated for the
+  // 2026-11-25 leveling rebuild: Spark tier, Level 1, every stat at 0
+  // (nobody gets starting stats). Stat targets are filled in at runtime
+  // from the same 12-week projection real users see (3 days/week, matching
+  // this fixture's Legs/Push/Pull week).
   const FIXTURE = {
     name: "RANA",
-    tier: "DORMANT",
+    tier: "SPARK",
+    title: null,
     level: 1,
-    xp: 0,
-    xpNeed: 80,
+    xpIntoLevel: 0,
+    xpLevelSpan: 47,
     recovery: null,
-    consistencyDays: 0,
+    streak: 0,
     sessionsLogged: 0,
-    nextTier: "Awakened · LV 5",
+    nextTier: "Ignition · LV 5",
     weekNumber: 1,
-    stats: [
-      { key: "STR", current: 12, target: 31 },
-      { key: "AGI", current: 9, target: 24 },
-      { key: "VIT", current: 15, target: 38 },
-      { key: "INT", current: 5, target: 40 },
-    ],
+    stats: null, // filled in by getDashboardState()
     today: {
       isRestDay: false,
       dayName: "Legs",
@@ -95,19 +93,27 @@ Rana.storage = (() => {
     const data = await Rana.data.load();
     const allLoggedSets = read(KEYS.loggedSets, []);
     const sessionFeedback = read(KEYS.sessionFeedback, {});
-    const slotsBySlotId = new Map(data.slots.map((s) => [s.slot_id, s]));
-
-    const xp = Rana.game.totalXp(allLoggedSets, slotsBySlotId);
+    // XP, level, tier, streak and title all come from replaying the full
+    // history through the XP ledger (game.js) — nothing is stored.
+    const ledger = Rana.game.computeXpLedger(allLoggedSets, plan, data);
+    const xp = ledger.totalXp;
     const level = Rana.game.levelForXp(xp);
     const tier = Rana.game.tierForLevel(level);
-    const xpNeed = Rana.game.xpForLevel(level + 1);
+    const title = Rana.game.currentTitle(ledger);
 
-    const baseline = Rana.game.computeBaselineStats(profile);
-    const projected = Rana.game.computeProjectedStats(baseline, profile);
-    const points = Rana.game.computeStatPoints(allLoggedSets, data.exerciseByKey);
+    // The XP bar shows progress through the CURRENT level (e.g. 120 / 141),
+    // not lifetime totals — otherwise at Level 30 the bar would read
+    // something like 40,000 / 42,000 and look permanently almost-full.
+    const levelStartXp = Rana.game.xpForLevel(level);
+    const xpIntoLevel = xp - levelStartXp;
+    const xpLevelSpan = Rana.game.xpForLevel(level + 1) - levelStartXp;
+
+    // Everyone starts at 0; stats only come from logged work.
+    const projected = Rana.game.computeProjectedStats(profile);
+    const points = Rana.game.computeStatPoints(allLoggedSets, data.exerciseByKey, ledger.sessionsCompleted);
     const stats = ["STR", "AGI", "VIT", "INT"].map((key) => ({
       key,
-      current: Rana.game.statValue(points[key], baseline[key]),
+      current: Rana.game.statValue(points[key]),
       target: projected[key],
     }));
 
@@ -189,35 +195,21 @@ Rana.storage = (() => {
       });
     }
 
-    // --- Consistency streak: consecutive days back from today where a
-    // rest day auto-passes and a training day must have been completed,
-    // stopping at the first uncompleted training day or the plan's own
-    // start_date. First-pass definition, not from the PRD — flag for review.
-    let consistencyDays = 0;
-    for (let i = 1; i <= 90; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const dateStr = Rana.plan.toDateStr(d);
-      if (dateStr < plan.start_date) break;
-      const loggedForDay = allLoggedSets.filter((s) => s.date === dateStr);
-      const session = Rana.plan.getSessionForDate(dateStr, plan, data, loggedForDay);
-      if (session.isRestDay || session.status === "completed") {
-        consistencyDays++;
-      } else {
-        break;
-      }
-    }
-
+    // Streak = consecutive completed training sessions, from the XP ledger
+    // (rest days don't count either way; a miss halves it). This replaced
+    // the old "consecutive days" count so the dashboard and the XP streak
+    // boost always show the same number.
     const sessionsLogged = new Set(allLoggedSets.map((s) => s.date)).size;
 
     return {
       name: profile.name,
       tier,
+      title: title ? title.name : null,
       level,
-      xp,
-      xpNeed,
+      xpIntoLevel,
+      xpLevelSpan,
       recovery,
-      consistencyDays,
+      streak: ledger.currentStreak,
       sessionsLogged,
       nextTier,
       weekNumber,
@@ -237,7 +229,11 @@ Rana.storage = (() => {
         "showing the day-1 fixture instead of real data. Complete the questionnaire " +
         "(onboarding.html) through the results screen's lock-in to wire this up."
       );
-      return FIXTURE;
+      const projected = Rana.game.computeProjectedStats({ training_days_per_week: 3 });
+      return {
+        ...FIXTURE,
+        stats: ["STR", "AGI", "VIT", "INT"].map((key) => ({ key, current: 0, target: projected[key] })),
+      };
     }
 
     return computeRealState(profile, plan);

@@ -1,6 +1,6 @@
 // Results / projection screen (PRD section 9) — the emotional centerpiece.
 // Reads the profile + draft plan the questionnaire just saved, computes
-// current vs. projected stats and nutrition targets, and reveals them in
+// projected stats (from 0) and nutrition targets, and reveals them in
 // sequence. Locking in sets the plan's start_date to today and moves on to
 // account creation.
 
@@ -16,13 +16,16 @@ function renderStatBar(container, value, max) {
   }
 }
 
-function buildStatBlocks(current, projected) {
+// Everyone starts every stat at 0 (the app can't know how strong you are
+// before you've trained), so there's no "now" row — just what 12 weeks of
+// following this plan builds, starting from empty bars. All four bars share
+// one scale so their relative sizes mean something.
+function buildStatBlocks(projected) {
   const container = document.getElementById("stat-blocks");
   container.innerHTML = "";
+  const max = Math.max(...STATS.map((s) => projected[s])) * 1.15;
 
   STATS.forEach((stat) => {
-    const max = Math.max(current[stat], projected[stat]) * 1.15;
-
     const block = document.createElement("div");
     block.style.marginBottom = "16px";
 
@@ -30,18 +33,6 @@ function buildStatBlocks(current, projected) {
     label.className = "stat-label";
     label.textContent = stat;
     block.appendChild(label);
-
-    const nowRow = document.createElement("div");
-    nowRow.className = "stat-row";
-    const nowTag = document.createElement("span");
-    nowTag.textContent = "NOW";
-    const nowBar = document.createElement("div");
-    nowBar.className = "stat-bar";
-    const nowValue = document.createElement("span");
-    nowValue.className = "stat-value num";
-    nowValue.textContent = current[stat];
-    nowRow.append(nowTag, nowBar, nowValue);
-    block.appendChild(nowRow);
 
     const projRow = document.createElement("div");
     projRow.className = "stat-row";
@@ -57,7 +48,6 @@ function buildStatBlocks(current, projected) {
 
     container.appendChild(block);
 
-    renderStatBar(nowBar, current[stat], max);
     renderStatBar(projBar, projected[stat], max);
   });
 }
@@ -111,9 +101,8 @@ async function main() {
   const data = await Rana.data.load();
   const split = data.splitById.get(plan.split_id);
 
-  const current = Rana.game.computeBaselineStats(profile);
-  const projected = Rana.game.computeProjectedStats(current, profile);
-  buildStatBlocks(current, projected);
+  const projected = Rana.game.computeProjectedStats(profile);
+  buildStatBlocks(projected);
 
   const quotes = await fetch("data/quotes.json").then((r) => r.json());
   const resultsQuotes = quotes.filter((q) => q.context.includes("results"));

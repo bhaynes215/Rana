@@ -6,7 +6,21 @@
 A web app (not native mobile) that gives college students a structured workout plan based on their goals and available equipment. Built by a fitness expert who is new to coding — I am learning as we build, so favor clear, simple code over clever code, and explain non-obvious choices in comments or in your responses.
 
 ## Current status
-_Last updated: 2026-09-13 (dashboard rebuilt against a design mockup)_
+_Last updated: 2026-11-25 (leveling system rebuilt; .edu-only sign-up)_
+
+**2026-11-25: Leveling system rebuilt** — full design in `docs/leveling-system.md`; summary:
+- **No cross-user "overall" rating.** Considered (an NBA-2K-style 60–99 OVR) and rejected: comparing absolute ratings between friends could be unhealthy. Levels are self-relative and everyone starts at Level 1.
+- **XP comes from only two sources** (no more 10 XP per prescribed set):
+  - **Strength increases:** beating your all-time best estimated 1RM (weight × (1 + reps ÷ 30)) on an exercise earns 10 XP per 1%, capped at 60 per exercise per session. Only sets of ≤15 reps count. The first 3 sessions of each exercise are calibration (baseline only). Bodyweight sets (0 extra weight) compare reps instead. Each `exercise_key` keeps its own record.
+  - **Consistency:** 100 XP per completed session (≥ half the prescribed sets logged), plus a streak boost of +5% per consecutive session, capped at +50%. Rest days don't affect the streak; a missed session **halves** it rather than resetting.
+- **Level curve:** XP to reach level n = 44 × (n − 1)². Tuned by simulation (`scripts/test_leveling.js`) so Level 50 (Mythic) takes ~3 years at 4 consistent days/week. The first estimate (47) landed at Level 48.
+- **New tiers:** Spark (1) → Ignition (5) → Awakened (13) → Ascended (22) → Transcendent (36) → Mythic (50). Each has its own glow color.
+- **All four stats start at 0** — no starting stats from the questionnaire. INT now earns 4 points per completed session (previously nothing ever raised it).
+- **Session complete** shows an XP breakdown, an animated level-up "title card" and a tier-up "transformation" (still frames under reduced motion), plus a "what powered this" line. **Earned titles** (The Unbroken, Limit Breaker, Iron Will, Centurion) show under your name on the dashboard.
+- **Fixed a live bug:** the old `totalXp()` grouped sets by slot instead of by date, so every session after the first of each workout day earned 0 XP.
+- `scripts/test_leveling.js` runs the real `game.js` in Node: a 3-year simulation plus rule checks. Run it with `node scripts/test_leveling.js` from the project folder.
+
+**2026-11-25: Sign-up requires a school (.edu) email** (`account-creation.js`). Browser-only for now, so it only catches honest mistakes; real enforcement (server-side check + verification email) comes with Supabase. Later, people will be able to see others at their own school (grouped by email domain) — opt-in, showing name, level and tier only.
 
 **2026-09-13: Dashboard rebuilt against `rana-dashboard-mockup.html`** (a design reference you added at the project root, not `design/` — PRD §7 game system + §10 visual system). New layout: persistent `position: sticky` vitals bar (identity/tier/XP/recovery/level) that never scrolls away, a left-aligned session card where the day name is the largest text on the page (the old "Welcome back" greeting is gone), a status matrix comparing current stats to the 12-week target (not next-level progress), and a microcycle strip using one cell shape for all seven days with state carried by border color and marker fill only. Two columns above 760px, one below.
 
@@ -30,7 +44,9 @@ A fourth issue was a logic bug, not a wiring bug: `Rana.plan.getSessionForDate` 
 Flagging these explicitly rather than letting them look finished:
 - **The 43 new exercise-library entries** (`scripts/build_library.py`'s `NEW_ENTRIES`) are drafted with standard exercise-science classifications, not reviewed by you.
 - **`data/quotes.json`'s wording** is drafted from memory, not checked against the actual George Long (1862) / Long-Higginson public-domain texts — verify before shipping, since the PRD's whole reason for specifying those translators is copyright safety.
-- **`game.js`'s baseline-stat, projected-stat, and calorie/macro formulas are first-pass inventions**, not from the PRD (it describes what they should depend on, not the math). Marked with comments in the file. The XP/level/tier formulas ARE from the PRD (§7.3) and should be exact.
+- **`game.js`'s projected-stat and calorie/macro formulas are first-pass inventions**, not from the PRD (it describes what they should depend on, not the math). Marked with comments in the file. (Baseline stats were removed 2026-11-25.)
+- **The leveling numbers are placeholders to tune with real data** — all in `XP_RULES` at the top of `game.js`: 100 XP/session, +5%/session streak capped at +50%, 10 XP per 1% strength increase capped at 60/exercise, 3 calibration sessions, ≤15 reps counted, curve factor 44. Observed in testing: early on, a beginner improving every exercise can earn 300+ XP from strength in one session (there's no per-session cap, only per-exercise) — intended as "beginner gains," but worth watching.
+- **Earned-title names and thresholds** (`TITLES` in `game.js`) are placeholders.
 - **PRD open question §13.2 (focus area) was resolved as "advisory only"** — `plan.js`'s split matcher doesn't use `focus_area` at all, it's just saved to the profile and could be surfaced in copy later. The other 3 PRD open questions (§13.1, §13.3, §13.4) are still genuinely open — see "Open questions" below.
 - **Split matching uses all 7 real splits from the workbook**, scored by goal + days/week + experience level, not the PRD's literal "4 goal templates" — see the comment at the top of `plan.js` for why.
 - **Height is collected in centimeters only** — the PRD's ft/in-or-cm option wasn't built, kept it to one unit for a first pass.
@@ -69,7 +85,7 @@ These were deliberate calls made while building the onboarding → account creat
 5. **No Google Calendar in v1**, but the fixed-weekly-schedule rule stands unchanged: a missed day is marked "missed," never silently rescheduled. The data model must not make Calendar hard to add later.
 6. **Exercise references use `exercise_key`** (stable slug), never free-text names. Done — `data/exercises.json` is now the keyed source of truth (see "Current status").
 7. **Calorie/macro targets are display-only.** Shown once on the results screen as part of the projection — no logging, no daily tracking, no nutrition screen. Safety guardrails apply: calorie floor (1,500 kcal men / 1,200 kcal women, clamp don't compute below), rate cap (~1% bodyweight/week, extend timeline rather than raise deficit).
-8. **Stats never decrease; XP rewards adherence, not tonnage.** A completed prescribed set is worth the same XP on a deload week as a heavy week — the game layer must never punish someone for correctly following its own prescription.
+8. **Levels and stats never decrease; XP rewards getting stronger and showing up — never volume or tonnage.** _(Rewritten 2026-11-25; it used to say every completed prescribed set earns equal XP.)_ XP comes only from (a) beating your own all-time best on an exercise, scaled by % so every lift is treated fairly, and (b) completing sessions, with a streak boost. A deload or cut week earns consistency XP only, so consistency XP must stay meaningful on its own. A deload must never cost XP compared with not training, and holding back to "bank" a later jump must never pay off (that's why increases are measured against the all-time best, not last week). No cross-user strength ratings: levels are self-relative, and everyone starts at Level 1 with all stats at 0.
 9. **Original naming throughout.** The user's own name (from the questionnaire) is the character name. No borrowed character names, rank ladders, or system dialogue. Stoic quotes must use public-domain translations (e.g. Marcus Aurelius via George Long, 1862) — not modern copyrighted translations.
 
 ## Build philosophy for this project
@@ -79,7 +95,7 @@ These were deliberate calls made while building the onboarding → account creat
 - Once reference data (`data/exercises.json`, `data/splits.json`, etc.) is loaded via `fetch` at startup, double-clicking the HTML file stops working — browsers block `fetch` against `file://`. From that point, testing needs a local server: `python3 -m http.server` from the project folder, then visit `localhost:8000`.
 
 ## Product scope — v1
-**Not in v1:** AI-generated plans, Google Calendar, nutrition logging, video, cardio programming, native app, social/leaderboard features, **equipment tiers**, real authentication, cross-device sync, notifications, college-specific personalization. These are deferred on purpose — don't suggest adding them. (Equipment tiers moved into this list per PRD D1 — see locked decision #4 above; this is a reversal of the original scope.)
+**Not in v1:** AI-generated plans, Google Calendar, nutrition logging, video, cardio programming, native app, social/leaderboard features (planned for later, once real accounts exist: friends and same-school users see each other's level and tier only — never lifts, bodyweight or streaks; no global leaderboard), **equipment tiers**, real authentication, cross-device sync, notifications, college-specific personalization. These are deferred on purpose — don't suggest adding them. (Equipment tiers moved into this list per PRD D1 — see locked decision #4 above; this is a reversal of the original scope.)
 
 **Flow:** Onboarding questionnaire → results/projection screen → account creation → home dashboard.
 Questionnaire comes *before* signup, so the user sees their plan before committing to an account. The results screen (new in the PRD) is what actually delivers on that — the questionnaire alone doesn't show a plan.
@@ -103,7 +119,7 @@ A training day is a set of movement-pattern slots, compound movements first. Eac
 
 **Calibration → progression:** Weeks 1–3, the structure is prescribed but load is up to the user to find (no starting weights assumed). Graduation out of calibration happens per movement pattern (roughly 3 logged sessions per pattern), not all at once globally. After graduation: simple rule-based linear progression (e.g. add weight when reps/sets are hit). **Open question (PRD §13.3):** confirm this still ships in v1 before building INT (below) — it's the only mechanic that makes INT move early.
 
-**Game layer (new in v1, PRD §7):** Four stats — STR, AGI, VIT, INT — rise automatically from logged work (no spendable points, no `[+]` buttons). Each is derived from a distinct real training quality (e.g. STR from heavy compound sets, INT from adherence to the plan as prescribed) and grows sub-linearly so early progress feels fast. XP rewards adherence, not tonnage, and drives levels and six named tiers (DORMANT → SOVEREIGN). A Recovery meter shows `—` rather than a fabricated number when there's no data yet. Full formulas are in the PRD — don't duplicate them here, read §7 before implementing.
+**Game layer (new in v1, PRD §7):** Four stats — STR, AGI, VIT, INT — rise automatically from logged work (no spendable points, no `[+]` buttons). Each is derived from a distinct real training quality (e.g. STR from heavy compound sets, INT from adherence to the plan as prescribed) and grows sub-linearly so early progress feels fast. Everyone starts every stat at 0. XP comes from strength increases plus consistency (see locked decision #8 and `docs/leveling-system.md`, which supersede PRD §7.3's XP formulas) and drives levels and six named tiers (Spark → Ignition → Awakened → Ascended → Transcendent → Mythic). A Recovery meter shows `—` rather than a fabricated number when there's no data yet. Full formulas are in the PRD — don't duplicate them here, read §7 before implementing.
 
 **Visual design (new in v1, PRD §10):** A dark "system HUD" identity — deep black/neon cyan, Chakra Petch for display type, zero border-radius (notched panels via `clip-path` instead), segmented (not gradient) stat bars, glow via `box-shadow` never blur. Full token list and rationale in PRD §10 — read it before styling new screens rather than guessing at the palette.
 
@@ -111,11 +127,11 @@ A training day is a set of movement-pattern slots, compound movements first. Eac
 All seven exist and are wired together with real data — ✅ done as a first pass, all still wanting the review pass described in "Current status" above.
 1. **Questionnaire** (`onboarding.html`/`onboarding.js`) — ✅ one-question-per-screen (PRD §8): progress indicator, back navigation via `history.pushState` per question, single-choice auto-advance, text/number needs explicit Continue, per-question validation.
 2. **Results / projection** (`results.html`/`results.js`) — ✅ sequenced reveal (current vs. projected stat bars, plan assignment, calorie/macro display), skippable on tap, respects `prefers-reduced-motion`, ends in the lock-in button that sets `plan.start_date`.
-3. **Account creation** (`account-creation.html`/`account-creation.js`) — ✅ restyled to the dark HUD system, logic unchanged and still intentionally inert (see original note below).
+3. **Account creation** (`account-creation.html`/`account-creation.js`) — ✅ restyled to the dark HUD system and still intentionally inert (see original note below); since 2026-11-25 it only accepts .edu emails.
 4. **Dashboard (home)** (`dashboard.html`/`dashboard.js`) — ✅ rebuilt 2026-09-13 against `rana-dashboard-mockup.html`: sticky vitals bar, status matrix (current vs. 12-week target), microcycle strip, left-aligned session card with the day name as the largest text on the page. Reads via `js/storage.js`, not the root `storage.js` — see "Current status" above.
 5. **Session detail** (`session-detail.html`/`session-detail.js`) — ✅ browse-only list of a day's movement-pattern slots with prescription and set counts; deliberately no swap control here (that's active session's job) per locked decision #3.
 6. **Active session / logging** (`active-session.html`/`active-session.js`) — ✅ per-set weight/reps logging plus exercise swapping, writes `logged_set` records immediately as each set is logged.
-7. **Session complete** (`session-complete.html`/`session-complete.js`) — ✅ shows XP gained and stat deltas for the session, a level-up or tier-up modal when crossed, and the one-tap difficulty rating already captured at the end of active session.
+7. **Session complete** (`session-complete.html`/`session-complete.js`) — ✅ shows XP gained with a line-by-line breakdown (strength increases, session, streak), stat deltas, any newly earned title, and an animated level-up title card or tier-up transformation when crossed. The one-tap difficulty rating is captured at the end of active session.
 
 ## Roadmap (check current status against this before proposing a plan)
 1. Toolkit setup — ✅ done
@@ -130,7 +146,7 @@ All seven exist and are wired together with real data — ✅ done as a first pa
 ## Open questions (PRD §13)
 1. **Under-18 users** — still genuinely open. Age is captured and stored but nothing branches on it yet, per the PRD's own instruction to leave this until it's answered.
 2. ~~Focus area's actual function~~ — **resolved 2026-09-11: advisory only.** Saved to the profile, not used by the split matcher. See "Needs your review" in Current status — this was a build-time call, not a discussion with you, so revisit if you'd rather it drove A/B split variant selection.
-3. **Calibration graduation and INT** — still open. The game layer computes INT from adherence generally; the specific "graduates per movement pattern after ~3 logged sessions" mechanic from `CLAUDE.md`'s original calibration section isn't implemented as a distinct gate yet.
+3. **Calibration graduation and INT** — still open. Partly addressed 2026-11-25: INT now earns 4 points per completed session (a stand-in; before that, nothing raised INT at all), and strength-increase XP has a per-exercise calibration (the first 3 sessions of each exercise only set a baseline). The specific "graduates per movement pattern after ~3 logged sessions" mechanic from `CLAUDE.md`'s original calibration section isn't implemented as a distinct gate yet.
 4. **Session length** — still open, not asked as a 14th question.
 
 ## How to work with me

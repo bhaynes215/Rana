@@ -15,6 +15,12 @@
 
     <p id="xp-gain" class="xp-gain num">+0 XP</p>
 
+    <!-- Where this session's XP came from, one line per source. -->
+    <ul id="xp-breakdown" class="panel xp-breakdown"></ul>
+
+    <!-- Shown only when this session earned a new title. -->
+    <p id="title-earned" class="title-earned" hidden></p>
+
     <div id="stat-gains" class="panel"></div>
 
     <div class="quote-panel">
@@ -25,18 +31,28 @@
     <a href="dashboard.html" class="btn-continue" style="text-align:center; text-decoration:none; display:block;">Back to dashboard</a>
   </main>
 
-  <div id="level-up-backdrop" class="modal-backdrop" hidden>
-    <div class="panel panel--raised level-up-modal">
-      <p class="hud-tier">LEVEL UP</p>
-      <p id="level-up-value" class="tier-up-name num"></p>
+  <!-- Level-up "title card": the screen dims, a line sweeps across, then
+       the level number slams in (animations in styles.css, turned off for
+       people who've asked their device for reduced motion). -->
+  <div id="level-up-backdrop" class="modal-backdrop title-card-backdrop" hidden>
+    <div class="title-card level-up-modal">
+      <span class="title-card-sweep" aria-hidden="true"></span>
+      <p class="title-card-label">LEVEL UP</p>
+      <p id="level-up-value" class="title-card-value num"></p>
+      <p id="level-up-powered" class="title-card-powered"></p>
       <button type="button" class="btn-continue" data-close-modal>Continue</button>
     </div>
   </div>
 
-  <div id="tier-up-backdrop" class="modal-backdrop" hidden>
-    <div class="panel panel--raised tier-up-modal">
-      <p class="tier-up-label">TIER ADVANCEMENT</p>
-      <p id="tier-up-value" class="tier-up-name"></p>
+  <!-- Tier-up "transformation": bigger than a level-up, in the new tier's
+       glow color (set via data-tier). -->
+  <div id="tier-up-backdrop" class="modal-backdrop title-card-backdrop" hidden>
+    <div id="tier-up-card" class="title-card tier-up-modal">
+      <span class="title-card-sweep" aria-hidden="true"></span>
+      <p class="title-card-label">TIER ADVANCEMENT</p>
+      <p id="tier-up-value" class="title-card-value"></p>
+      <p id="tier-up-level" class="title-card-sub num"></p>
+      <p id="tier-up-powered" class="title-card-powered"></p>
       <button type="button" class="btn-continue" data-close-modal>Continue</button>
     </div>
   </div>
