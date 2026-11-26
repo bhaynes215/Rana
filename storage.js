@@ -72,15 +72,27 @@ Rana.storage = (() => {
     write(KEYS.plan, plan);
   }
 
-  // --- One-time migration of older data ---
-  // Before sessions existed, sets were saved with just a date. If any set has
-  // no session_id, group those by date into one finished session each, so
-  // nothing from before is lost. Safe to run any number of times: once every
-  // set has a session_id there's nothing left to do.
+  // --- Migration of older data ---
+  // 1. Before sessions existed, sets were saved with just a date. Any set
+  //    with no session_id is grouped by date into one finished session each,
+  //    so nothing from before is lost.
+  // 2. Before sets could be edited, they had no id of their own. Any set
+  //    without a set_id gets one (two sets can otherwise look identical,
+  //    e.g. the same exercise in two slots).
+  // Safe to run any number of times: once every set has both, there's
+  // nothing left to do.
   function migrateLegacySets() {
     const sets = read(KEYS.loggedSets, []);
+    if (sets.every((s) => s.session_id && s.set_id)) return;
+
+    sets.forEach((s) => {
+      if (!s.set_id) s.set_id = newSetId();
+    });
     const orphans = sets.filter((s) => !s.session_id);
-    if (orphans.length === 0) return;
+    if (orphans.length === 0) {
+      write(KEYS.loggedSets, sets);
+      return;
+    }
 
     const plan = read(KEYS.plan, null);
     const feedback = read(KEYS.sessionFeedback, {});
@@ -124,6 +136,10 @@ Rana.storage = (() => {
   // --- Sessions ---
   function newSessionId(dateStr) {
     return `s_${dateStr.replace(/-/g, "")}_${Math.random().toString(36).slice(2, 6)}`;
+  }
+
+  function newSetId() {
+    return `x_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   }
 
   function getSessions() {
@@ -180,7 +196,9 @@ Rana.storage = (() => {
     });
   }
 
-  // Discarding deletes the session AND its sets — no XP, no trace.
+  // Discarding (an unfinished workout) or deleting (a finished one from the
+  // history) removes the session AND its sets. XP is recalculated from what's
+  // left, so deleting a past workout takes its XP with it.
   function discardSession(sessionId) {
     write(KEYS.sessions, getSessions().filter((s) => s.session_id !== sessionId));
     write(KEYS.loggedSets, read(KEYS.loggedSets, []).filter((s) => s.session_id !== sessionId));
@@ -198,9 +216,30 @@ Rana.storage = (() => {
   }
   function addLoggedSet(entry) {
     const all = getAllLoggedSets();
-    all.push(entry);
+    const withId = { set_id: newSetId(), ...entry };
+    all.push(withId);
     write(KEYS.loggedSets, all);
-    return entry;
+    return withId;
+  }
+
+  // --- Fixing mistakes (from the workout history) ---
+  // A typo like 1000 lb instead of 100 would otherwise become that
+  // exercise's "best" forever, and no later set could beat it. Because XP,
+  // levels and stats are always recalculated from the logged sets, fixing a
+  // set fixes everything downstream — including, possibly, lowering a level
+  // that the typo inflated. That's intended: "levels never go down" means
+  // never from training or resting, not from correcting your own data entry.
+  function updateLoggedSet(setId, patch) {
+    const all = getAllLoggedSets();
+    const set = all.find((s) => s.set_id === setId);
+    if (!set) return null;
+    Object.assign(set, patch);
+    write(KEYS.loggedSets, all);
+    return set;
+  }
+
+  function deleteLoggedSet(setId) {
+    write(KEYS.loggedSets, getAllLoggedSets().filter((s) => s.set_id !== setId));
   }
 
   // Sets from FINISHED sessions only — what XP, stats and recovery use.
@@ -235,6 +274,8 @@ Rana.storage = (() => {
     getAllLoggedSets,
     getSetsForSession,
     addLoggedSet,
+    updateLoggedSet,
+    deleteLoggedSet,
     getFinishedSets,
     getDifficultyByDate,
   };

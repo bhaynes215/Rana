@@ -10,6 +10,12 @@
 // The reveal is a list of "steps" (a line lands, the bar fills, a card
 // appears), run one after another on timers. Tapping anywhere runs all the
 // remaining steps at once; reduced-motion users skip straight to the end.
+//
+// Opened from the workout history (?from=history), it's a quiet look back:
+// everything is shown in its final state at once, and no level-up cards.
+// The "Edit" button (both modes) lets the user fix sets or delete the
+// workout; saving reloads in history mode, so a correction never replays
+// the reveal or fakes a level-up.
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const SEGMENTS = 20;
@@ -159,6 +165,131 @@ function buildRecap(session, sets, after, data) {
     });
     li.appendChild(chips);
     list.appendChild(li);
+  });
+}
+
+// ---------------------------------------------------------------------
+// Editing a finished workout: fix a set, remove a set, or delete it all
+// ---------------------------------------------------------------------
+function buildEditor(session, sets, data) {
+  const container = document.getElementById("editor-exercises");
+  container.innerHTML = "";
+
+  const byExercise = new Map();
+  [...sets].sort((a, b) => a.set_index - b.set_index).forEach((s) => {
+    const list = byExercise.get(s.exercise_key) || [];
+    list.push(s);
+    byExercise.set(s.exercise_key, list);
+  });
+
+  byExercise.forEach((exSets, key) => {
+    const block = el("div", "editor-exercise");
+    block.appendChild(el("p", "recap-exercise-name", exerciseName(data, key)));
+    exSets.forEach((set, i) => {
+      const row = el("div", "editor-row");
+      row.dataset.setId = set.set_id;
+      row.appendChild(el("span", "editor-row-index num", String(i + 1)));
+
+      const weight = el("input");
+      weight.type = "number";
+      weight.inputMode = "decimal";
+      weight.min = "0";
+      weight.value = set.weight;
+      weight.setAttribute("aria-label", `${exerciseName(data, key)} set ${i + 1} weight`);
+      weight.dataset.field = "weight";
+
+      const reps = el("input");
+      reps.type = "number";
+      reps.inputMode = "numeric";
+      reps.min = "1";
+      reps.value = set.reps;
+      reps.setAttribute("aria-label", `${exerciseName(data, key)} set ${i + 1} reps`);
+      reps.dataset.field = "reps";
+
+      // Remove toggles the row on and off, so a mis-tap is easy to undo.
+      const remove = el("button", "editor-remove", "Remove");
+      remove.type = "button";
+      remove.setAttribute("aria-pressed", "false");
+      remove.addEventListener("click", () => {
+        const removing = remove.getAttribute("aria-pressed") !== "true";
+        remove.setAttribute("aria-pressed", String(removing));
+        remove.textContent = removing ? "Undo" : "Remove";
+        row.classList.toggle("editor-row--removed", removing);
+        weight.disabled = removing;
+        reps.disabled = removing;
+      });
+
+      row.append(weight, el("span", "editor-times", "×"), reps, remove);
+      block.appendChild(row);
+    });
+    container.appendChild(block);
+  });
+}
+
+function setupEditing(session, sets, data) {
+  const list = document.getElementById("recap-exercises");
+  const editor = document.getElementById("recap-editor");
+  const editBtn = document.getElementById("edit-btn");
+  const errorEl = document.getElementById("editor-error");
+  const backToHistory = `session-complete.html?session=${session.session_id}&from=history`;
+
+  function openEditor() {
+    buildEditor(session, sets, data);
+    errorEl.textContent = "";
+    list.hidden = true;
+    editBtn.hidden = true;
+    editor.hidden = false;
+  }
+  function closeEditor() {
+    editor.hidden = true;
+    list.hidden = false;
+    editBtn.hidden = false;
+  }
+
+  editBtn.addEventListener("click", openEditor);
+  document.getElementById("editor-cancel").addEventListener("click", closeEditor);
+
+  document.getElementById("editor-save").addEventListener("click", () => {
+    const rows = [...editor.querySelectorAll(".editor-row")];
+    const changes = [];
+    for (const row of rows) {
+      const setId = row.dataset.setId;
+      if (row.classList.contains("editor-row--removed")) {
+        changes.push({ setId, remove: true });
+        continue;
+      }
+      const weight = Number(row.querySelector('[data-field="weight"]').value || 0);
+      const reps = Number(row.querySelector('[data-field="reps"]').value);
+      if (Number.isNaN(weight) || weight < 0 || !Number.isInteger(reps) || reps < 1) {
+        errorEl.textContent = "Each set needs a weight of 0 or more and at least 1 whole rep.";
+        return;
+      }
+      const original = sets.find((s) => s.set_id === setId);
+      if (original && (Number(original.weight) !== weight || Number(original.reps) !== reps)) {
+        changes.push({ setId, weight, reps });
+      }
+    }
+
+    const remaining = rows.length - changes.filter((c) => c.remove).length;
+    if (remaining === 0) {
+      // Removing every set is the same as deleting the workout.
+      if (!window.confirm("That removes every set, which deletes this workout and the XP it earned. Continue?")) return;
+      Rana.storage.discardSession(session.session_id);
+      window.location.href = "history.html";
+      return;
+    }
+
+    changes.forEach((c) => {
+      if (c.remove) Rana.storage.deleteLoggedSet(c.setId);
+      else Rana.storage.updateLoggedSet(c.setId, { weight: c.weight, reps: c.reps });
+    });
+    window.location.href = backToHistory;
+  });
+
+  document.getElementById("delete-workout").addEventListener("click", () => {
+    if (!window.confirm(`Delete "${Rana.plan.sessionTitle(session, data)}"? Its sets and the XP it earned are removed. This can't be undone.`)) return;
+    Rana.storage.discardSession(session.session_id);
+    window.location.href = "history.html";
   });
 }
 
@@ -342,8 +473,22 @@ async function main() {
   );
   const gained = after.totalXp - without.totalXp;
 
+  const fromHistory = params.get("from") === "history";
+  if (fromHistory) {
+    document.getElementById("top-back").hidden = false;
+    document.getElementById("system-label").textContent = "[ LOGBOOK ]";
+    document.getElementById("system-heading").textContent = "WORKOUT SUMMARY";
+    const primary = document.getElementById("bottom-primary");
+    primary.href = "history.html";
+    primary.textContent = "Back to history";
+    const secondary = document.getElementById("bottom-secondary");
+    secondary.href = "dashboard.html";
+    secondary.textContent = "Dashboard";
+  }
+
   const sessionSets = allSets.filter((s) => s.session_id === session.session_id);
   buildRecap(session, sessionSets, after, data);
+  setupEditing(session, sessionSets, data);
 
   // --- The XP panel, starting at the "before" state ---
   const lines = buildLines(session, after, data);
@@ -431,17 +576,18 @@ async function main() {
         titleEl.textContent = `Title earned: ${t.name} — ${t.description}`;
         titleEl.hidden = false;
       }
-      showCards();
+      if (!fromHistory) showCards(); // a look back never fakes a level-up moment
       return 0;
     },
   });
 
   document.getElementById("summary-screen").addEventListener("click", (event) => {
-    if (event.target.closest("a, button")) return; // don't let skip-on-tap eat real controls
+    // Don't let skip-on-tap eat real controls (or taps inside the editor).
+    if (event.target.closest("a, button, input, .recap-editor")) return;
     skipReveal();
   });
 
-  if (reduceMotion) skipReveal();
+  if (reduceMotion || fromHistory) skipReveal();
   else later(() => runFrom(0), 350);
 }
 

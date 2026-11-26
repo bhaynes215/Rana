@@ -258,6 +258,26 @@ check("legacy per-date difficulty moves onto the session", migrated.find((s) => 
 Rana.storage.getAllLoggedSets();
 check("migration is idempotent (running again adds nothing)", Rana.storage.getSessions().length === 2);
 
+// Fixing mistakes: sets get ids, can be edited and deleted.
+store.clear();
+Rana.storage.savePlan(plan3);
+const fixMe = Rana.storage.startSession({ type: "freestyle", title: "Typo test", date: mondayW4 });
+const typo = Rana.storage.addLoggedSet({ session_id: fixMe.session_id, date: mondayW4, exercise_key: "bench", set_index: 1, weight: 1000, reps: 8 });
+const other = Rana.storage.addLoggedSet({ session_id: fixMe.session_id, date: mondayW4, exercise_key: "bench", set_index: 2, weight: 100, reps: 8 });
+check("every new set gets its own set_id", typo.set_id && other.set_id && typo.set_id !== other.set_id);
+Rana.storage.updateLoggedSet(typo.set_id, { weight: 100 });
+check("editing a set changes only that set", Rana.storage.getSetsForSession(fixMe.session_id).map((x) => x.weight).join() === "100,100");
+Rana.storage.deleteLoggedSet(other.set_id);
+check("deleting a set removes only that set", Rana.storage.getSetsForSession(fixMe.session_id).length === 1);
+store.set("rana:v1:logged_sets", JSON.stringify([{ session_id: fixMe.session_id, date: mondayW4, exercise_key: "bench", set_index: 1, weight: 1, reps: 1 }]));
+check("older sets without a set_id get one on read", Rana.storage.getAllLoggedSets().every((x) => x.set_id));
+
+// The history's per-workout XP adds up to the lifetime total.
+const histParts = base.concat([plannedSession(plan3, mondayW4, { [benchKey]: { weight: 200, reps: 8 } }), freestyleSession(tuesday, benchKey, 4, 210, 8), freestyleSession(mondayW4, "db_curl", 4)]);
+const histLedger = ledgerOf(histParts, plan3, tuesday);
+const perSession = histParts.reduce((sum, p) => sum + Rana.game.xpForSession(histLedger, p.session), 0);
+check("per-workout XP (history) sums exactly to total XP", perSession === histLedger.totalXp, `${perSession} vs ${histLedger.totalXp}`);
+
 // ---------- 5. Limitations shape the SUGGESTED workout only ----------
 console.log("");
 const squatSlot = slotsDoc.slots.find((s) => data.optionsBySlot.get(s.slot_id)[0].exercise_key === "back_squat");

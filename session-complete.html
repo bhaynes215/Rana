@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Session Complete — Rana</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Semi+Condensed:wght@500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,8 +15,11 @@
     final state right away (same approach as the analysis page).
   -->
   <main class="screen" id="summary-screen">
-    <p class="system-label">[ SYSTEM ]</p>
-    <h1 class="system-heading">SESSION COMPLETE</h1>
+    <!-- Only shown when opened from the workout history. -->
+    <a id="top-back" href="history.html" class="back-link" hidden>← Workout history</a>
+
+    <p id="system-label" class="system-label">[ SYSTEM ]</p>
+    <h1 id="system-heading" class="system-heading">SESSION COMPLETE</h1>
 
     <!-- What you just did: title, kind, and the headline numbers. -->
     <header class="recap-head">
@@ -44,10 +47,27 @@
     <!-- Shown only when this session earned a new title. -->
     <p id="title-earned" class="title-earned" hidden></p>
 
-    <!-- Every exercise and set from this workout. -->
+    <!-- Every exercise and set from this workout. "Edit" swaps the list for
+         an editor where any set can be corrected or removed (a typo like
+         1000 lb would otherwise count as a "best" forever), or the whole
+         workout deleted. XP and levels recalculate from whatever's saved. -->
     <section class="panel recap-panel" aria-label="Your workout">
-      <p class="today-eyebrow">Your workout</p>
+      <div class="panel-head">
+        <p class="eyebrow">Your workout</p>
+        <button id="edit-btn" type="button" class="btn-quiet btn-quiet--accent">Edit</button>
+      </div>
       <ul id="recap-exercises" class="recap-exercises"></ul>
+
+      <div id="recap-editor" class="recap-editor" hidden>
+        <p class="session-note">Fix any typo, or remove a set you didn't do. XP, levels and stats recalculate when you save.</p>
+        <div id="editor-exercises"></div>
+        <p id="editor-error" class="status-message status-message--error" aria-live="polite"></p>
+        <div class="editor-actions">
+          <button id="editor-save" type="button" class="btn-continue">Save changes</button>
+          <button id="editor-cancel" type="button" class="btn-secondary">Cancel</button>
+        </div>
+        <button id="delete-workout" type="button" class="btn-quiet btn-quiet--danger">Delete this workout</button>
+      </div>
     </section>
 
     <div id="stat-gains" class="panel"></div>
@@ -57,7 +77,10 @@
       <span id="quote-attribution" class="quote-attribution"></span>
     </div>
 
-    <a href="dashboard.html" class="btn-continue" style="text-align:center; text-decoration:none; display:block;">Back to dashboard</a>
+    <div class="summary-actions">
+      <a id="bottom-primary" href="dashboard.html" class="btn-continue btn-link">Back to dashboard</a>
+      <a id="bottom-secondary" href="history.html" class="btn-secondary btn-link">Workout history</a>
+    </div>
   </main>
 
   <!-- Level-up "title card": the screen dims, a line sweeps across, then

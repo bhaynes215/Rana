@@ -333,6 +333,18 @@ Rana.game = (() => {
     return ledger;
   }
 
+  // How much XP one session earned: its own strength increases, plus the
+  // day's session XP and streak boost if this was the workout that earned
+  // them. Summed over every session, this equals ledger.totalXp exactly
+  // (scripts/test_leveling.js checks that).
+  function xpForSession(ledger, session) {
+    const sessionEntry = ledger.sessionEntries.get(session.session_id);
+    const entry = ledger.entries.get(session.date);
+    let xp = sessionEntry ? sessionEntry.strengthXp : 0;
+    if (entry && entry.xpSessionId === session.session_id) xp += entry.sessionXp + entry.streakBonusXp;
+    return xp;
+  }
+
   // ---------------------------------------------------------------------
   // Earned titles: shown under your name. Placeholder names and
   // thresholds for the fitness expert to rename/tune. Ordered from easiest
@@ -555,6 +567,7 @@ Rana.game = (() => {
     tierForLevel,
     estimatedOneRepMax,
     computeXpLedger,
+    xpForSession,
     earnedTitles,
     currentTitle,
     statValue,
