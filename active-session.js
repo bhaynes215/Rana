@@ -45,14 +45,12 @@ function buildSetRow({ index, existing, getExerciseKey, makeEntry, onLogged }) {
   indexEl.textContent = index;
   row.appendChild(indexEl);
 
-  const weightInput = document.createElement("input");
-  weightInput.type = "number";
-  weightInput.inputMode = "decimal";
+  // Number-only text boxes: no up/down arrows, nothing but digits (and one
+  // decimal point for weight) can be typed. See Rana.ui.numericField.
+  const weightInput = Rana.ui.numericField(document.createElement("input"), { decimal: true });
   row.appendChild(weightInput);
 
-  const repsInput = document.createElement("input");
-  repsInput.type = "number";
-  repsInput.inputMode = "numeric";
+  const repsInput = Rana.ui.numericField(document.createElement("input"));
   repsInput.placeholder = "reps";
   row.appendChild(repsInput);
 
@@ -160,11 +158,7 @@ function buildSlotCard(slot, pick) {
     rowEls.forEach((r) => r.refresh());
   }
 
-  const prescription = document.createElement("p");
-  prescription.className = "slot-prescription";
-  prescription.innerHTML =
-    `<span class="num">${slot.working_sets}</span> sets &times; ${slot.rep_range} reps · RPE <span class="num">${slot.target_rpe}</span>`;
-  card.appendChild(prescription);
+  card.appendChild(Rana.ui.prescription(slot));
 
   // --- Swap picker (every alternative, always) ---
   if (options.length > 1) {

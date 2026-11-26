@@ -60,11 +60,7 @@ async function main() {
     name.textContent = primaryExercise ? primaryExercise.exercise_name : "(exercise unavailable)";
     card.appendChild(name);
 
-    const prescription = document.createElement("p");
-    prescription.className = "slot-prescription";
-    prescription.innerHTML =
-      `<span class="num">${slot.working_sets}</span> sets &times; ${slot.rep_range} reps · RPE <span class="num">${slot.target_rpe}</span> · rest <span class="num">${slot.rest_seconds}</span>s`;
-    card.appendChild(prescription);
+    card.appendChild(Rana.ui.prescription(slot, { showRest: true }));
 
     if (pick.substituted || pick.caution.length) {
       const limitNote = document.createElement("p");

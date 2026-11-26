@@ -190,18 +190,12 @@ function buildEditor(session, sets, data) {
       row.dataset.setId = set.set_id;
       row.appendChild(el("span", "editor-row-index num", String(i + 1)));
 
-      const weight = el("input");
-      weight.type = "number";
-      weight.inputMode = "decimal";
-      weight.min = "0";
+      const weight = Rana.ui.numericField(el("input"), { decimal: true });
       weight.value = set.weight;
       weight.setAttribute("aria-label", `${exerciseName(data, key)} set ${i + 1} weight`);
       weight.dataset.field = "weight";
 
-      const reps = el("input");
-      reps.type = "number";
-      reps.inputMode = "numeric";
-      reps.min = "1";
+      const reps = Rana.ui.numericField(el("input"));
       reps.value = set.reps;
       reps.setAttribute("aria-label", `${exerciseName(data, key)} set ${i + 1} reps`);
       reps.dataset.field = "reps";

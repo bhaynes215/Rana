@@ -813,6 +813,129 @@ fieldset label input[type="checkbox"] {
   color: var(--void);
 }
 
+/* ---- The (i) info button and its popover ----
+   A small square badge (zero border-radius, like everything else) that opens
+   a plain-language explanation. Used next to RPE on the workout screens and
+   next to each stat in the status matrix. See ui.js. */
+
+.info-btn {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-2);
+  padding: 0;
+  vertical-align: middle;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1;
+  color: var(--system-cyan);
+  background-color: rgba(63, 233, 255, 0.08);
+  border: 1px solid rgba(63, 233, 255, 0.5);
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+/* The visible badge is small; this invisible layer makes the tap target
+   comfortably large without changing the layout. */
+.info-btn::after {
+  content: "";
+  position: absolute;
+  inset: -11px;
+}
+.info-btn:hover,
+.info-btn[aria-expanded="true"] {
+  color: var(--void);
+  background-color: var(--system-cyan);
+}
+
+.info-pop {
+  position: fixed;
+  z-index: 50;
+  width: min(340px, calc(100vw - 24px));
+  padding: var(--space-4);
+  background-color: var(--panel-raised);
+  border: 1px solid rgba(63, 233, 255, 0.5);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(63, 233, 255, 0.12);
+  outline: none;
+}
+/* A small caret pointing at the button that opened it. */
+.info-pop::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: calc(var(--caret-x, 20px) - 5px);
+  width: 10px;
+  height: 10px;
+  background-color: var(--panel-raised);
+  border-top: 1px solid rgba(63, 233, 255, 0.5);
+  border-left: 1px solid rgba(63, 233, 255, 0.5);
+  transform: rotate(45deg);
+}
+.info-pop--above::before {
+  top: auto;
+  bottom: -6px;
+  border-top: 0;
+  border-left: 0;
+  border-bottom: 1px solid rgba(63, 233, 255, 0.5);
+  border-right: 1px solid rgba(63, 233, 255, 0.5);
+}
+
+.info-pop-title {
+  margin: 2px 0 var(--space-2);
+  font-size: 1.25rem;
+}
+.info-pop-text {
+  margin: 0 0 var(--space-3);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #c7dbe4;
+}
+.info-pop-scale {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid rgba(63, 233, 255, 0.14);
+  border-bottom: 1px solid rgba(63, 233, 255, 0.14);
+}
+.info-pop-scale div {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: var(--space-2);
+  padding: 4px 0;
+}
+.info-pop-scale dt {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--system-cyan);
+}
+.info-pop-scale dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.info-pop-footer {
+  margin: 0 0 var(--space-3);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+.info-pop-done {
+  display: block;
+  margin-left: auto;
+  padding: 6px 2px;
+  background: none;
+  border: 0;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--system-cyan);
+  cursor: pointer;
+}
+
 /* ---- Session complete / tier-up ---- */
 
 .xp-gain {
@@ -1036,7 +1159,7 @@ fieldset label input[type="checkbox"] {
   align-items: center;
   gap: var(--space-3) var(--space-5);
   padding: var(--space-4) var(--space-4) var(--space-4);
-  background-color: rgba(8, 14, 21, 0.97);
+  background-color: #080e15; /* solid: a see-through bar showed the page scrolling behind it */
   border-bottom: 1px solid rgba(63, 233, 255, 0.16);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
@@ -1386,6 +1509,9 @@ fieldset label input[type="checkbox"] {
   font-family: var(--font-display);
 }
 .stat-matrix-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.16em;

@@ -233,6 +233,8 @@ async function main() {
       `<span class="stat-matrix-values"><span class="num">${stat.current}</span>` +
       `<span class="stat-matrix-arrow">&rarr;</span>` +
       `<span class="num stat-matrix-target">${stat.target}</span></span>`;
+    // An (i) button next to the stat's name explains what the stat is.
+    head.querySelector(".stat-matrix-name").appendChild(Rana.ui.infoButton(stat.key));
     row.appendChild(head);
 
     const bar = document.createElement("div");
