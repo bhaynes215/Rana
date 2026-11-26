@@ -42,6 +42,34 @@ Week 5, 14-session streak, every prescribed set done, a +4.8% increase on 7 exer
 
 (This came from a real in-browser test. Early on, beginners improving every exercise can earn far more from strength than from showing up. That's intended as "beginner gains," but it's worth watching with real data.)
 
+## Suggested vs. freestyle workouts (added 2026-11-25)
+The plan is a suggestion. The streak boost is the reward for following it; training on your own earns XP too, but never more than following the plan, and resting is never out-rewarded.
+
+| What you did | Session XP | Streak | Strength XP |
+|---|---|---|---|
+| The suggested workout on its day (≥ half its prescribed sets) | 100 × the streak boost | **Grows** | ✅ |
+| Freestyle, or a cut-short suggested workout, on a training day (≥ 3 sets) | Flat 100, no boost | **Holds** | ✅ |
+| Any workout on a rest day | **None** | Unaffected | ✅ |
+| Nothing on a training day | None | **Halves** | n/a |
+
+- **Session XP is earned at most once per day**, however many workouts you do. If the suggested workout and a freestyle workout are both done, the suggested one counts.
+- **Strength XP follows the exercise, not the workout type.** Every exercise keeps one record across suggested and freestyle workouts, so getting stronger always counts.
+- **Only finished workouts count.** A workout still in progress earns nothing until you tap Finish; discarding one deletes its sets.
+- **INT** only grows from suggested workouts done as prescribed ("following the plan").
+- A freestyle workout shows on the week strip as **off-plan** (not missed) when it replaces a suggested workout.
+
+## The summary screen
+Shown after every finished workout (`session-complete`):
+1. **Recap:** workout name, kind and date, duration, exercises and sets; every exercise lists its sets, with a ★ on the set that earned a strength increase.
+2. **XP lines land one at a time** while the big total counts up. The biggest strength gain lands last.
+   - Gains under +5%: a quiet line.
+   - **+5% or more: NEW RECORD** (banner, glow, screen flash).
+   - Hitting the 60 XP cap: **MAX GAIN**.
+   - A suggested workout on-plan: "Suggested workout complete," then **ADHERENCE ×1.35 · 6 in a row** as a combo line.
+   - Plain-language notes explain anything that earned no session XP (rest day, under 3 sets, already earned today).
+3. **The level bar fills.** If a level or tier was crossed, the level-up card or tier-up transformation fires at the end.
+4. **Tap anywhere to skip.** Reduced-motion users get the finished state immediately.
+
 ## Levels
 **Total XP needed to reach level n = 44 × (n − 1)²**
 
