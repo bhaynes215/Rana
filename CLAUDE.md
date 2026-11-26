@@ -6,7 +6,14 @@
 A web app (not native mobile) that gives college students a structured workout plan based on their goals and available equipment. Built by a fitness expert who is new to coding — I am learning as we build, so favor clear, simple code over clever code, and explain non-obvious choices in comments or in your responses.
 
 ## Current status
-_Last updated: 2026-11-25 (leveling system rebuilt; .edu-only sign-up)_
+_Last updated: 2026-11-25 (leveling system rebuilt; .edu-only sign-up; analysis page redesigned)_
+
+**2026-11-25: Analysis (results) page redesigned** — the stat bars are gone. Top to bottom:
+1. **Your split:** the headline panel, with a brighter border and glow. It shows the split name, a summary line (days/week, session length, goal, experience level), the full Mon–Sun week with each workout and its focus on its fixed weekday (rest days listed, never blank), and the split's own "Built for" line.
+2. **Your 12-week route:** tier milestones (diamonds in each tier's color) over a week-by-week phase track: calibration (weeks 1–3), build, and the split's own deload weeks from `deload_every_weeks` in `data/splits.json` (every 4, 6 or 8 weeks depending on the split).
+   - The headline level is a **floor**, labeled "at least." It comes from the new `Rana.game.forecastRoute()` and counts consistency XP only, since strength gains can't be predicted.
+   - Example: a 4-day plan forecasts at least Level 13 (Awakened) by week 12.
+3. Quote, then calories/macros and the disclaimer, then the lock-in button. The reveal animation follows this order.
 
 **2026-11-25: Leveling system rebuilt** — full design in `docs/leveling-system.md`; summary:
 - **No cross-user "overall" rating.** Considered (an NBA-2K-style 60–99 OVR) and rejected: comparing absolute ratings between friends could be unhealthy. Levels are self-relative and everyone starts at Level 1.
@@ -28,7 +35,7 @@ This introduced `js/storage.js` — a **second** localStorage-reading module, se
 
 Bug caught by actually running it in a browser (not just reading the code): the mockup's own label-truncation approach turned "Shoulders + Back (V-Taper Day)" into "SHOULD" — read like a typo, not an abbreviation. Fixed by shortening the truncation to 4 characters.
 
-**The rest of the PRD build order (§3) was done as a first pass on 2026-09-11** — every screen in the v1 flow exists, is wired to real data, and has been driven end-to-end in a real headless browser (Playwright) with zero console errors: 13-question questionnaire → results/projection with stat bars and a reveal animation → account creation → dashboard reading a real assigned plan → session detail → active session with logging and exercise swap → session complete with XP/stat/tier-up. Three real bugs were caught and fixed only by actually running it (not just reading the code) — see "Bugs found by testing, not reading" below. **This is a first pass, not a polished/reviewed release** — see "Needs your review before this is trustworthy" below for what's still a placeholder judgment call rather than a confirmed decision.
+**The rest of the PRD build order (§3) was done as a first pass on 2026-09-11** — every screen in the v1 flow exists, is wired to real data, and has been driven end-to-end in a real headless browser (Playwright) with zero console errors: 13-question questionnaire → results/projection with a reveal animation (stat bars at the time; redesigned 2026-11-25) → account creation → dashboard reading a real assigned plan → session detail → active session with logging and exercise swap → session complete with XP/stat/tier-up. Three real bugs were caught and fixed only by actually running it (not just reading the code) — see "Bugs found by testing, not reading" below. **This is a first pass, not a polished/reviewed release** — see "Needs your review before this is trustworthy" below for what's still a placeholder judgment call rather than a confirmed decision.
 
 New shared modules (no build tooling, plain `<script>` tags, everything hangs off a `window.Rana` namespace): `data.js` (fetches/caches `data/*.json`), `storage.js` (the one file that touches `localStorage`), `plan.js` (split-matching + the fixed weekday→workout schedule), `game.js` (stat/XP/tier/calorie math). `styles.css` was fully rewritten to the PRD's dark "system HUD" visual system (§10) — every screen now uses it, not just new ones.
 
@@ -47,6 +54,7 @@ Flagging these explicitly rather than letting them look finished:
 - **`game.js`'s projected-stat and calorie/macro formulas are first-pass inventions**, not from the PRD (it describes what they should depend on, not the math). Marked with comments in the file. (Baseline stats were removed 2026-11-25.)
 - **The leveling numbers are placeholders to tune with real data** — all in `XP_RULES` at the top of `game.js`: 100 XP/session, +5%/session streak capped at +50%, 10 XP per 1% strength increase capped at 60/exercise, 3 calibration sessions, ≤15 reps counted, curve factor 44. Observed in testing: early on, a beginner improving every exercise can earn 300+ XP from strength in one session (there's no per-session cap, only per-exercise) — intended as "beginner gains," but worth watching.
 - **Earned-title names and thresholds** (`TITLES` in `game.js`) are placeholders.
+- **Deload weeks are shown but not prescribed.** The analysis page's 12-week route marks the split's deload weeks, but the session screens prescribe the same sets and rep targets every week. Either make deload weeks actually lighter (your call on what "lighter" means), or drop deload from the route until that exists.
 - **PRD open question §13.2 (focus area) was resolved as "advisory only"** — `plan.js`'s split matcher doesn't use `focus_area` at all, it's just saved to the profile and could be surfaced in copy later. The other 3 PRD open questions (§13.1, §13.3, §13.4) are still genuinely open — see "Open questions" below.
 - **Split matching uses all 7 real splits from the workbook**, scored by goal + days/week + experience level, not the PRD's literal "4 goal templates" — see the comment at the top of `plan.js` for why.
 - **Height is collected in centimeters only** — the PRD's ft/in-or-cm option wasn't built, kept it to one unit for a first pass.
@@ -70,7 +78,7 @@ _Superseded below — kept for history:_
 
 ### Next pass
 The PRD's build order (§3) — library repair through account creation restyle — is done as a first pass (see "Current status" above). What's actually next:
-1. **Fitness-expert review pass** — work through "Needs your review before this is trustworthy" above, especially the 43 new library entries and the invented baseline/projection/calorie formulas.
+1. **Fitness-expert review pass** — work through "Needs your review before this is trustworthy" above, especially the 43 new library entries, the invented projection/calorie formulas, and the leveling placeholder numbers.
 2. **Resolve the remaining 3 PRD open questions** (§13.1 under-18, §13.3 calibration/INT, §13.4 session length) — see "Open questions" below.
 3. **Expand session detail/active session beyond "today only"** if browsing/logging other dates turns out to matter for real use.
 4. Deploy (free hosting) — still not done, no live URL yet.
@@ -126,7 +134,7 @@ A training day is a set of movement-pattern slots, compound movements first. Eac
 ## Screens (in build order per PRD §3)
 All seven exist and are wired together with real data — ✅ done as a first pass, all still wanting the review pass described in "Current status" above.
 1. **Questionnaire** (`onboarding.html`/`onboarding.js`) — ✅ one-question-per-screen (PRD §8): progress indicator, back navigation via `history.pushState` per question, single-choice auto-advance, text/number needs explicit Continue, per-question validation.
-2. **Results / projection** (`results.html`/`results.js`) — ✅ sequenced reveal (current vs. projected stat bars, plan assignment, calorie/macro display), skippable on tap, respects `prefers-reduced-motion`, ends in the lock-in button that sets `plan.start_date`.
+2. **Results / projection** (`results.html`/`results.js`) — ✅ redesigned 2026-11-25: the split leads (its name and full Mon–Sun week), then the 12-week route (tier milestones + calibration/build/deload phases), quote, and calorie/macro display last. Sequenced reveal, skippable on tap, respects `prefers-reduced-motion`, ends in the lock-in button that sets `plan.start_date`. No stat bars.
 3. **Account creation** (`account-creation.html`/`account-creation.js`) — ✅ restyled to the dark HUD system and still intentionally inert (see original note below); since 2026-11-25 it only accepts .edu emails.
 4. **Dashboard (home)** (`dashboard.html`/`dashboard.js`) — ✅ rebuilt 2026-09-13 against `rana-dashboard-mockup.html`: sticky vitals bar, status matrix (current vs. 12-week target), microcycle strip, left-aligned session card with the day name as the largest text on the page. Reads via `js/storage.js`, not the root `storage.js` — see "Current status" above.
 5. **Session detail** (`session-detail.html`/`session-detail.js`) — ✅ browse-only list of a day's movement-pattern slots with prescription and set counts; deliberately no swap control here (that's active session's job) per locked decision #3.

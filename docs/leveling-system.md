@@ -75,7 +75,7 @@ Shown under your name on the dashboard, and announced on session complete when e
 ## Stats (STR / AGI / VIT / INT)
 - All start at **0** and are only earned from logged work (rules unchanged otherwise; see `computeStatPoints` in `game.js`).
 - **INT:** +4 points per completed session. This is a stand-in until PRD open question §13.3 is decided.
-- The results screen shows the 12-week projection from 0.
+- The results (analysis) screen no longer shows stats. Since 2026-11-25 it shows the split and a 12-week route instead: tier milestones forecast by `forecastRoute()` from consistency XP only (a floor, labeled "at least"), over calibration/build/deload phases. The dashboard's status matrix still shows each stat against a 12-week target.
 
 ## Level-up moments
 - **Level-up title card:** the screen dims, a line sweeps across, and the level number slams in.
