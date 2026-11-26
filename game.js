@@ -468,7 +468,9 @@ Rana.game = (() => {
   // label it as one (PRD section 7.5), never as a guarantee.
   function computeProjectedStats(profile) {
     const sessionsOver12Weeks = Number(profile.training_days_per_week) * 12;
-    const avgSetsPerSession = 18; // rough average across the workbook's splits
+    // Every program workout is capped at 6 exercises x 3 sets (scripts/library_rules.py),
+    // so a session is 18 working sets or just under: the real average is 17.9.
+    const avgSetsPerSession = 18;
 
     const points = {
       STR: sessionsOver12Weeks * avgSetsPerSession * 0.35,

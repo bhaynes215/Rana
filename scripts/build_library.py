@@ -20,16 +20,24 @@ so they'd fail silently the moment the app tried to show a swap option. This scr
      each row already *is* one slot (a movement-pattern requirement) with up to three
      ranked options (primary, alternative_1, alternative_2), so the conversion is
      mechanical, not a redesign.
-  6. Exports data/exercises.json, data/splits.json, data/workouts.json, data/slots.json.
+  6. Applies the program caps in scripts/library_rules.py (at most 3 sets per
+     exercise, at most 6 exercises per workout day) and re-estimates each workout's
+     and split's session length to match. The workbook itself keeps the full,
+     uncapped lists; the caps are applied here, on the way out, so they survive
+     any future edit to the spreadsheet.
+  7. Exports data/exercises.json, data/splits.json, data/workouts.json, data/slots.json.
 
 Run: python3 scripts/build_library.py
 Requires: openpyxl (only for reading the .xlsx — the generated JSON has no dependency).
 """
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import openpyxl
+
+from library_rules import MAX_EXERCISES_PER_WORKOUT, MAX_SETS_PER_EXERCISE, SECONDS_PER_SET
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKBOOK = ROOT / "workout-data" / "workout_splits_database.xlsx"
@@ -399,6 +407,64 @@ def build_slots(wb, name_to_key):
     return slots, slot_options
 
 
+def work_seconds(slot):
+    """Rough time a slot takes: its sets, each with the slot's own rest period."""
+    return slot["working_sets"] * (SECONDS_PER_SET + (slot["rest_seconds"] or 0))
+
+
+def round_to_5(minutes):
+    return max(20, int(5 * round(minutes / 5)))
+
+
+def apply_program_caps(slots, slot_options, workouts, splits):
+    """Applies the caps in library_rules.py:
+
+      - every slot's working_sets is capped at MAX_SETS_PER_EXERCISE (a ceiling:
+        slots already at 2 sets stay at 2);
+      - each workout keeps only its first MAX_EXERCISES_PER_WORKOUT slots by
+        slot_order. The workbook lists every workout in priority order (compound
+        lifts first, the least important accessory last), so what gets dropped is
+        each too-long workout's final accessory.
+
+    Also re-estimates est_session_minutes for every trimmed workout (the time
+    removed is subtracted from the workbook's own estimate, which keeps its
+    warm-up and transition allowance), and sets each split's estimate to the
+    average of its workouts'. Returns the new slots, slot_options, and a report
+    of what was changed, for printing.
+    """
+    by_workout = defaultdict(list)
+    for slot in slots:
+        by_workout[slot["workout_id"]].append(slot)
+
+    kept, dropped, sets_capped = [], [], 0
+    minutes_removed = {}
+    for workout_id, group in by_workout.items():
+        group.sort(key=lambda s: s["slot_order"])
+        before = sum(work_seconds(s) for s in group)
+        for slot in group[:MAX_EXERCISES_PER_WORKOUT]:
+            if slot["working_sets"] > MAX_SETS_PER_EXERCISE:
+                slot["working_sets"] = MAX_SETS_PER_EXERCISE
+                sets_capped += 1
+            kept.append(slot)
+        dropped.extend((workout_id, s) for s in group[MAX_EXERCISES_PER_WORKOUT:])
+        after = sum(work_seconds(s) for s in group[:MAX_EXERCISES_PER_WORKOUT])
+        minutes_removed[workout_id] = (before - after) / 60
+
+    kept_ids = {s["slot_id"] for s in kept}
+    slot_options = [o for o in slot_options if o["slot_id"] in kept_ids]
+
+    for workout in workouts:
+        removed = minutes_removed.get(workout["workout_id"], 0)
+        workout["est_session_minutes"] = round_to_5(workout["est_session_minutes"] - removed)
+
+    for split in splits:
+        mine = [w["est_session_minutes"] for w in workouts if w["split_id"] == split["split_id"]]
+        if mine:
+            split["est_session_minutes"] = round_to_5(sum(mine) / len(mine))
+
+    return kept, slot_options, dict(sets_capped=sets_capped, dropped=dropped)
+
+
 def main():
     wb = openpyxl.load_workbook(WORKBOOK, data_only=True)
 
@@ -406,6 +472,7 @@ def main():
     splits = build_splits(wb)
     workouts = build_workouts(wb)
     slots, slot_options = build_slots(wb, name_to_key)
+    slots, slot_options, caps = apply_program_caps(slots, slot_options, workouts, splits)
 
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "exercises.json").write_text(json.dumps(library, indent=2) + "\n")
@@ -418,6 +485,8 @@ def main():
     print(f"workouts.json: {len(workouts)} workout days")
     print(f"slots.json: {len(slots)} slots, {len(slot_options)} slot_options")
     print(f"aliases resolved: {len(ALIASES)}")
+    print(f"program caps: {caps['sets_capped']} slots cut to {MAX_SETS_PER_EXERCISE} sets; "
+          f"{len(caps['dropped'])} slots dropped to keep workouts at {MAX_EXERCISES_PER_WORKOUT} exercises or fewer")
     print("All exercise references resolved cleanly.")
 
 

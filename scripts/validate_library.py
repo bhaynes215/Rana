@@ -14,7 +14,10 @@ Run: python3 scripts/validate_library.py
 """
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
+
+from library_rules import MAX_EXERCISES_PER_WORKOUT, MAX_SETS_PER_EXERCISE
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -36,6 +39,29 @@ def main():
             errors.append(f"slot_option references unknown slot_id {opt['slot_id']}")
         if opt["exercise_key"] not in valid_keys:
             errors.append(f"slot {opt['slot_id']}: exercise_key '{opt['exercise_key']}' not in exercises.json")
+
+    # Program caps (scripts/library_rules.py): at most 3 sets per exercise, at
+    # most 6 different exercises per workout, and no exercise twice in one workout.
+    primary_by_slot = {
+        o["slot_id"]: o["exercise_key"] for o in slots_doc["slot_options"] if o["option_rank"] == 1
+    }
+    option_count = defaultdict(int)
+    for opt in slots_doc["slot_options"]:
+        option_count[opt["slot_id"]] += 1
+    by_workout = defaultdict(list)
+    for slot in slots_doc["slots"]:
+        by_workout[slot["workout_id"]].append(slot)
+        if slot["working_sets"] > MAX_SETS_PER_EXERCISE:
+            errors.append(f"slot {slot['slot_id']}: {slot['working_sets']} sets (max {MAX_SETS_PER_EXERCISE})")
+        if option_count[slot["slot_id"]] == 0:
+            errors.append(f"slot {slot['slot_id']}: has no exercise options")
+    for workout_id, group in by_workout.items():
+        if len(group) > MAX_EXERCISES_PER_WORKOUT:
+            errors.append(f"{workout_id}: {len(group)} exercises (max {MAX_EXERCISES_PER_WORKOUT})")
+        keys = [primary_by_slot.get(s["slot_id"]) for s in group]
+        repeated = sorted({k for k in keys if k and keys.count(k) > 1})
+        if repeated:
+            errors.append(f"{workout_id}: repeats {', '.join(repeated)}")
 
     if errors:
         print(f"VALIDATION FAILED: {len(errors)} problem(s)", file=sys.stderr)
