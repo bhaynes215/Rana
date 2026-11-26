@@ -28,11 +28,12 @@ async function main() {
   // --- Vitals bar (persistent chrome, pinned via CSS position: sticky) ---
   document.getElementById("vitals-name").textContent = state.name;
   document.getElementById("vitals-tier").textContent = state.tier;
-  document.getElementById("level-text").textContent = `LV ${state.level}`;
+  document.getElementById("level-text").textContent = state.level;
 
-  // Tier glow: styles.css gives each tier its own glow color, keyed off
-  // this data-tier attribute, so the color changes as you tier up.
-  document.querySelector(".vitals-id").dataset.tier = state.tier;
+  // Tier glow: styles.css gives each tier its own color, keyed off this
+  // data-tier attribute (name accent, tier label, level badge), so the whole
+  // top bar changes color as you tier up.
+  document.querySelector(".vitals").dataset.tier = state.tier;
 
   // Earned title (e.g. "The Unbroken") under the name, only once earned.
   const titleEl = document.getElementById("vitals-title");
@@ -40,8 +41,8 @@ async function main() {
   titleEl.hidden = !state.title;
 
   // XP progress through the current level, not lifetime totals.
-  document.getElementById("xp-text").textContent =
-    `${state.xpIntoLevel} / ${state.xpLevelSpan} XP TO LV ${state.level + 1}`;
+  document.getElementById("xp-label").textContent = `To level ${state.level + 1}`;
+  document.getElementById("xp-text").textContent = `${state.xpIntoLevel} / ${state.xpLevelSpan} XP`;
   renderSegments(document.getElementById("xp-bar"), segmentsFor(state.xpIntoLevel, state.xpLevelSpan));
 
   const recoveryText = document.getElementById("recovery-text");
@@ -99,6 +100,9 @@ async function main() {
   const limitationNote = document.getElementById("limitation-note");
 
   document.getElementById("session-label").textContent = "Today's suggested workout";
+  document.getElementById("today-date").textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "short", month: "short", day: "numeric",
+  });
   freestyleBtn.hidden = busy;
 
   if (today.isRestDay) {
@@ -119,22 +123,32 @@ async function main() {
     }
     freestyleBtn.textContent = today.trainedToday ? "Start another workout" : "Start a workout anyway";
 
+    const quoteText = document.getElementById("rest-quote-text");
+    const quoteCite = document.getElementById("rest-quote-cite");
     fetch("data/quotes.json")
       .then((r) => r.json())
       .then((quotes) => {
         const restQuotes = quotes.filter((q) => q.context.includes("rest"));
         const quote = restQuotes[Math.floor(Math.random() * restQuotes.length)];
-        restNote.textContent = `"${quote.text}" — ${quote.author}`;
+        quoteText.textContent = `“${quote.text}”`;
+        quoteCite.textContent = quote.author;
       })
       .catch(() => {
-        restNote.textContent = "Rest days are part of the plan.";
+        quoteText.textContent = "Rest days are part of the plan.";
+        quoteCite.textContent = "";
       });
   } else {
     document.getElementById("session-day").textContent = today.dayName;
     document.getElementById("session-focus").textContent = today.focusMuscles;
     document.getElementById("meta-slots").textContent = today.slotCount;
     document.getElementById("meta-sets").textContent = today.workingSets;
-    document.getElementById("meta-time").textContent = `${today.estMinutes}m`;
+    // Big number, small unit ("60 min"), same as the other two stats.
+    const timeEl = document.getElementById("meta-time");
+    timeEl.textContent = today.estMinutes;
+    const unit = document.createElement("span");
+    unit.className = "session-meta-unit";
+    unit.textContent = "min";
+    timeEl.appendChild(unit);
     restNote.hidden = true;
 
     limitationNote.hidden = !today.limitationNote;
@@ -230,7 +244,7 @@ async function main() {
   });
 
   // --- Microcycle: one cell shape for all seven days, state via border/marker only ---
-  document.getElementById("week-number").textContent = `week ${state.weekNumber}`;
+  document.getElementById("week-number").textContent = `Week ${state.weekNumber}`;
   const weekStrip = document.getElementById("week-strip");
   weekStrip.innerHTML = "";
   state.week.forEach((day) => {
@@ -248,7 +262,16 @@ async function main() {
   document.getElementById("footer-consistency").textContent =
     `${state.streak} ${state.streak === 1 ? "session" : "sessions"}`;
   document.getElementById("footer-logged").textContent = state.sessionsLogged;
-  document.getElementById("footer-next").textContent = state.nextTier;
+  // "Awakened · LV 13" → tier name, with the level as a small second line.
+  const nextEl = document.getElementById("footer-next");
+  const [nextName, nextLevel] = state.nextTier.split(" · ");
+  nextEl.textContent = nextName;
+  if (nextLevel) {
+    const sub = document.createElement("span");
+    sub.className = "dash-stat-sub";
+    sub.textContent = nextLevel;
+    nextEl.appendChild(sub);
+  }
 }
 
 main();

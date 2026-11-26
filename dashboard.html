@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Rana</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Semi+Condensed:wght@500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -19,16 +19,21 @@
 
   <!-- Persistent chrome: identity, tier, XP, recovery, level. Pinned via
        position: sticky in styles.css — does not scroll with the content
-       below it. -->
+       below it. On phones it's two compact rows (who you are + level, then
+       the two meters side by side); on wide screens, one row. -->
   <header class="vitals">
     <div class="vitals-id">
       <p id="vitals-name" class="hud-name vitals-name"></p>
       <p id="vitals-title" class="vitals-title" hidden></p>
       <p id="vitals-tier" class="hud-tier"></p>
     </div>
-    <div class="vitals-meter">
+    <div class="vitals-level" aria-label="Level">
+      <span class="vitals-level-label">LV</span>
+      <span id="level-text" class="vitals-level-value num"></span>
+    </div>
+    <div class="vitals-meter vitals-meter--xp">
       <div class="vitals-meter-row">
-        <span class="vitals-meter-label">Workload</span>
+        <span id="xp-label" class="vitals-meter-label">Next level</span>
         <span id="xp-text" class="vitals-meter-value num"></span>
       </div>
       <div id="xp-bar" class="stat-bar"></div>
@@ -40,18 +45,14 @@
       </div>
       <div id="recovery-bar" class="stat-bar"></div>
     </div>
-    <div class="vitals-level">
-      <p class="vitals-meter-label">Level</p>
-      <p id="level-text" class="vitals-level-value num"></p>
-    </div>
   </header>
 
-  <main class="screen dashboard-main">
+  <main class="dashboard-main">
     <!-- A workout already started but not finished (today's, or one left
          over from an earlier day). Only one workout can be in progress at a
          time, so while this shows, the start buttons below are hidden. -->
     <section id="resume-banner" class="panel resume-banner" hidden>
-      <p id="resume-label" class="today-eyebrow"></p>
+      <p id="resume-label" class="eyebrow"></p>
       <p id="resume-title" class="resume-title"></p>
       <div class="resume-actions">
         <button id="resume-btn" class="btn-continue" type="button">Resume</button>
@@ -59,59 +60,83 @@
       </div>
     </section>
 
+    <!-- The page reads top to bottom as: today → this week → your stats.
+         On wide screens the stats move to a right-hand column. -->
     <div class="dashboard-grid">
 
-      <!-- Session card: today's workout, left-aligned, day name is the
-           largest text on the page (no "Welcome back" greeting). -->
-      <section class="panel session-card">
-        <p id="session-label" class="today-eyebrow"></p>
+      <!-- Today's suggested workout. The day name is the largest text on the
+           page (no "Welcome back" greeting). -->
+      <section class="panel session-card" aria-labelledby="session-day">
+        <div class="session-card-top">
+          <p id="session-label" class="eyebrow"></p>
+          <p id="today-date" class="session-date"></p>
+        </div>
         <h1 id="session-day" class="session-day"></h1>
         <p id="session-focus" class="session-focus"></p>
 
-        <div id="session-meta" class="session-meta">
-          <div><span class="today-eyebrow">Slots</span><span id="meta-slots" class="num"></span></div>
-          <div><span class="today-eyebrow">Working sets</span><span id="meta-sets" class="num"></span></div>
-          <div><span class="today-eyebrow">Est. time</span><span id="meta-time" class="num"></span></div>
-        </div>
+        <dl id="session-meta" class="session-meta">
+          <div><dt class="eyebrow">Exercises</dt><dd id="meta-slots" class="num"></dd></div>
+          <div><dt class="eyebrow">Sets</dt><dd id="meta-sets" class="num"></dd></div>
+          <div><dt class="eyebrow">Time</dt><dd id="meta-time" class="num"></dd></div>
+        </dl>
 
         <div id="session-yield" class="session-yield">
-          <span class="today-eyebrow">Stat yield</span>
-          <span id="yield-chips"></span>
+          <span class="eyebrow">Builds</span>
+          <span id="yield-chips" class="chips"></span>
         </div>
 
         <!-- Set when limitations swapped exercises or some still load a limited joint. -->
-        <p id="limitation-note" class="session-note" hidden></p>
+        <p id="limitation-note" class="session-note session-note--caution" hidden></p>
 
-        <!-- Rest is the SUGGESTION on a rest day, not a lock (changed
-             2026-11-25; this reverses locked design decision #1). There's no
-             primary "Start" button on rest days; the quieter freestyle button
-             below sits under the quote instead. -->
-        <button id="session-cta" class="btn-continue" type="button"></button>
-        <p id="rest-note" class="session-focus" hidden></p>
+        <!-- Rest-day quote. Rest is the SUGGESTION on a rest day, not a lock
+             (changed 2026-11-25; reverses locked design decision #1). -->
+        <blockquote id="rest-note" class="session-quote" hidden>
+          <p id="rest-quote-text"></p>
+          <cite id="rest-quote-cite"></cite>
+        </blockquote>
 
-        <!-- Freestyle: the plan is a suggestion, never a requirement. On a
-             rest day this sits under the quote ("Start a workout anyway");
-             on a training day it's the quieter "Do something else". -->
-        <button id="freestyle-btn" class="btn-secondary session-freestyle" type="button"></button>
+        <!-- The buttons always sit together at the bottom of the card, with
+             room above them: the main action, then the quieter freestyle
+             option ("Start a workout anyway" / "Do something else"). -->
+        <div class="session-actions">
+          <button id="session-cta" class="btn-continue" type="button"></button>
+          <button id="freestyle-btn" class="btn-secondary" type="button"></button>
+        </div>
+      </section>
+
+      <section class="panel microcycle" aria-labelledby="week-heading">
+        <div class="panel-head">
+          <h2 id="week-heading" class="eyebrow">This week</h2>
+          <span id="week-number" class="panel-head-meta num"></span>
+        </div>
+        <div id="week-strip" class="microcycle-strip"></div>
       </section>
 
       <div class="dashboard-side">
-        <section class="panel status-matrix">
-          <h2 class="today-eyebrow">Status matrix</h2>
+        <section class="panel status-matrix" aria-labelledby="matrix-heading">
+          <div class="panel-head">
+            <h2 id="matrix-heading" class="eyebrow">Status matrix</h2>
+            <span class="panel-head-meta">Now → 12-week target</span>
+          </div>
           <div id="stat-rows"></div>
         </section>
 
-        <section class="panel microcycle">
-          <h2 class="today-eyebrow">Microcycle · <span id="week-number" class="num"></span></h2>
-          <div id="week-strip" class="microcycle-strip"></div>
-        </section>
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <span class="eyebrow">Streak</span>
+            <span id="footer-consistency" class="dash-stat-value num"></span>
+          </div>
+          <a class="dash-stat dash-stat--link" href="history.html">
+            <span class="eyebrow">Workouts</span>
+            <span id="footer-logged" class="dash-stat-value num"></span>
+            <span class="dash-stat-cta">History →</span>
+          </a>
+          <div class="dash-stat">
+            <span class="eyebrow">Next tier</span>
+            <span id="footer-next" class="dash-stat-value"></span>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div class="dashboard-footer">
-      <div><span class="today-eyebrow">Streak</span><span id="footer-consistency" class="num"></span></div>
-      <div><span class="today-eyebrow">Sessions logged</span><span id="footer-logged" class="num"></span></div>
-      <div><span class="today-eyebrow">Next tier</span><span id="footer-next" class="num"></span></div>
     </div>
   </main>
 
