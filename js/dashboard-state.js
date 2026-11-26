@@ -1,40 +1,16 @@
-// The dashboard's one and only door to persistence. Nothing else in
-// dashboard.html/dashboard.js touches localStorage — everything the
-// dashboard needs comes back from getDashboardState() below.
+// Assembles everything the dashboard renders into one plain object, so
+// dashboard.js never has to touch storage, the plan, or the XP math itself.
 //
-// Note on scope: the rest of the app (questionnaire, results, session
-// screens) still uses the original /storage.js at the project root, and
-// that file still calls localStorage directly — it's untouched this
-// session on purpose (out of scope). This file reads the SAME
-// localStorage keys that root storage.js writes, so real data from a
-// completed questionnaire shows up here too, not just the fixture.
-//
-// getDashboardState() also leans on the existing data.js / plan.js /
-// game.js modules (loaded as separate <script> tags in dashboard.html) for
-// the exercise-library lookups and stat/XP/schedule math — this file
-// doesn't reimplement any of that, it only owns the localStorage read and
-// assembles the final shape the dashboard renders.
+// This file used to be a second localStorage-reading module (js/storage.js).
+// As of 2026-11-25 it reads through Rana.storage (the root storage.js) like
+// every other screen, so there is exactly ONE place that touches
+// localStorage. It still leans on data.js / plan.js / game.js for the
+// exercise-library lookups and the schedule/XP math — it doesn't
+// reimplement any of that, it only assembles the final shape.
 
 window.Rana = window.Rana || {};
 
-Rana.storage = (() => {
-  const KEYS = {
-    profile: "rana:v1:profile",
-    plan: "rana:v1:plan",
-    loggedSets: "rana:v1:logged_sets",
-    sessionFeedback: "rana:v1:session_feedback",
-  };
-
-  function read(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (e) {
-      console.warn(`Rana.storage: couldn't read ${key}.`, e);
-      return fallback;
-    }
-  }
-
+Rana.dashboard = (() => {
   // The dashboard mockup's "Day 1 — nothing logged" state, updated for the
   // 2026-11-25 leveling rebuild: Spark tier, Level 1, every stat at 0
   // (nobody gets starting stats). Stat targets are filled in at runtime
@@ -46,13 +22,14 @@ Rana.storage = (() => {
     title: null,
     level: 1,
     xpIntoLevel: 0,
-    xpLevelSpan: 47,
+    xpLevelSpan: 44,
     recovery: null,
     streak: 0,
     sessionsLogged: 0,
     nextTier: "Ignition · LV 5",
     weekNumber: 1,
     stats: null, // filled in by getDashboardState()
+    inProgress: null,
     today: {
       isRestDay: false,
       dayName: "Legs",
@@ -61,6 +38,9 @@ Rana.storage = (() => {
       workingSets: 20,
       estMinutes: 75,
       statYield: ["STR", "VIT"],
+      completed: false,
+      summarySessionId: null,
+      limitationNote: null,
     },
     week: [
       { weekday: "Mon", state: "rest", label: "" },
@@ -89,13 +69,37 @@ Rana.storage = (() => {
     return firstWord.slice(0, 4).toUpperCase();
   }
 
+  // "Adjusted for your knee." / "Some exercises load your knee — go light."
+  function limitationNoteFor(slots, data, limitations) {
+    if (limitations.length === 0) return null;
+    let adjusted = false;
+    const cautionJoints = new Set();
+    Rana.plan.suggestWorkout(slots, data, limitations).forEach((pick) => {
+      if (pick.substituted) adjusted = true;
+      pick.caution.forEach((j) => cautionJoints.add(j));
+    });
+    const parts = [];
+    if (adjusted) parts.push(`Some exercises were swapped to work around your ${limitations.map((l) => l.replace("-", " ")).join(" / ")}.`);
+    if (cautionJoints.size) parts.push(`A few still load your ${[...cautionJoints].map((j) => j.replace("-", " ")).join(" / ")}: go light.`);
+    return parts.join(" ") || null;
+  }
+
   async function computeRealState(profile, plan) {
     const data = await Rana.data.load();
-    const allLoggedSets = read(KEYS.loggedSets, []);
-    const sessionFeedback = read(KEYS.sessionFeedback, {});
+
+    // Only FINISHED workouts count toward XP, stats and recovery.
+    const finishedSessions = Rana.storage.getFinishedSessions();
+    const finishedSets = Rana.storage.getFinishedSets();
+    const sessionsByDate = new Map();
+    finishedSessions.forEach((s) => {
+      const list = sessionsByDate.get(s.date) || [];
+      list.push(s);
+      sessionsByDate.set(s.date, list);
+    });
+
     // XP, level, tier, streak and title all come from replaying the full
     // history through the XP ledger (game.js) — nothing is stored.
-    const ledger = Rana.game.computeXpLedger(allLoggedSets, plan, data);
+    const ledger = Rana.game.computeXpLedger(finishedSets, finishedSessions, plan, data);
     const xp = ledger.totalXp;
     const level = Rana.game.levelForXp(xp);
     const tier = Rana.game.tierForLevel(level);
@@ -110,14 +114,14 @@ Rana.storage = (() => {
 
     // Everyone starts at 0; stats only come from logged work.
     const projected = Rana.game.computeProjectedStats(profile);
-    const points = Rana.game.computeStatPoints(allLoggedSets, data.exerciseByKey, ledger.sessionsCompleted);
+    const points = Rana.game.computeStatPoints(finishedSets, data.exerciseByKey, ledger.plannedSessionsCompleted);
     const stats = ["STR", "AGI", "VIT", "INT"].map((key) => ({
       key,
       current: Rana.game.statValue(points[key]),
       target: projected[key],
     }));
 
-    const recovery = Rana.game.computeRecovery(allLoggedSets, plan, sessionFeedback);
+    const recovery = Rana.game.computeRecovery(finishedSets, plan, Rana.storage.getDifficultyByDate());
 
     const tierIndex = Rana.game.TIERS.findIndex((t) => t.name === tier);
     const nextTierDef = Rana.game.TIERS[tierIndex + 1];
@@ -130,21 +134,40 @@ Rana.storage = (() => {
     const dayDiff = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
     const weekNumber = Math.max(1, Math.floor(dayDiff / 7) + 1);
 
-    // --- Today ---
+    // --- A workout already in progress (today's, or one left over from an earlier day) ---
+    const inProgressSession = Rana.storage.getInProgressSession();
     const todayStr = Rana.plan.todayStr();
-    const loggedToday = allLoggedSets.filter((s) => s.date === todayStr);
-    const todaySession = Rana.plan.getSessionForDate(todayStr, plan, data, loggedToday);
+    const inProgress = inProgressSession
+      ? {
+          sessionId: inProgressSession.session_id,
+          title: Rana.plan.sessionTitle(inProgressSession, data),
+          type: inProgressSession.type,
+          date: inProgressSession.date,
+          isFromEarlierDay: inProgressSession.date < todayStr,
+        }
+      : null;
+
+    // --- Today ---
+    const todayFinished = sessionsByDate.get(todayStr) || [];
+    const todaySession = Rana.plan.getSessionForDate(todayStr, plan, data, todayFinished);
+    const limitations = Rana.plan.activeLimitations(profile);
+    const lastFinishedToday = todayFinished[todayFinished.length - 1] || null;
+    const plannedFinishedToday = todayFinished.find((s) => s.type === "planned") || null;
 
     let today;
     if (todaySession.isRestDay) {
-      today = { isRestDay: true };
+      today = {
+        isRestDay: true,
+        trainedToday: todayFinished.length > 0,
+        summarySessionId: lastFinishedToday ? lastFinishedToday.session_id : null,
+      };
     } else {
       const slots = todaySession.slots;
-      const primaryExercises = slots
-        .map((slot) => {
-          const opt = (data.optionsBySlot.get(slot.slot_id) || []).find((o) => o.option_rank === 1);
-          return opt ? data.exerciseByKey.get(opt.exercise_key) : null;
-        })
+      // The SUGGESTED exercise for each slot: the main one, unless it loads
+      // a joint the user reported a limitation on (see plan.js).
+      const primaryExercises = Rana.plan
+        .suggestWorkout(slots, data, limitations)
+        .map((pick) => (pick.exerciseKey ? data.exerciseByKey.get(pick.exerciseKey) : null))
         .filter(Boolean);
 
       const muscleGroups = [...new Set(primaryExercises.map((e) => e.muscle_group))];
@@ -165,6 +188,9 @@ Rana.storage = (() => {
         estMinutes: todaySession.workout.est_session_minutes,
         statYield,
         completed: todaySession.status === "completed",
+        trainedToday: todayFinished.length > 0,
+        summarySessionId: (plannedFinishedToday || lastFinishedToday || {}).session_id || null,
+        limitationNote: limitationNoteFor(slots, data, limitations),
       };
     }
 
@@ -178,12 +204,12 @@ Rana.storage = (() => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const dateStr = Rana.plan.toDateStr(d);
-      const loggedForDay = allLoggedSets.filter((s) => s.date === dateStr);
-      const session = Rana.plan.getSessionForDate(dateStr, plan, data, loggedForDay);
+      const session = Rana.plan.getSessionForDate(dateStr, plan, data, sessionsByDate.get(dateStr) || []);
 
       let state;
       if (session.isRestDay) state = "rest";
       else if (session.status === "completed") state = "done";
+      else if (session.status === "off-plan") state = "off-plan"; // trained something else instead
       else if (session.status === "today") state = "today";
       else if (session.status === "missed") state = "missed";
       else state = "planned"; // upcoming, or a training weekday before plan.start_date
@@ -195,12 +221,6 @@ Rana.storage = (() => {
       });
     }
 
-    // Streak = consecutive completed training sessions, from the XP ledger
-    // (rest days don't count either way; a miss halves it). This replaced
-    // the old "consecutive days" count so the dashboard and the XP streak
-    // boost always show the same number.
-    const sessionsLogged = new Set(allLoggedSets.map((s) => s.date)).size;
-
     return {
       name: profile.name,
       tier,
@@ -209,23 +229,27 @@ Rana.storage = (() => {
       xpIntoLevel,
       xpLevelSpan,
       recovery,
+      // Streak = consecutive suggested workouts done as prescribed, from the
+      // XP ledger (rest days don't count either way; a miss halves it;
+      // training off-plan holds it).
       streak: ledger.currentStreak,
-      sessionsLogged,
+      sessionsLogged: finishedSessions.length,
       nextTier,
       weekNumber,
       stats,
+      inProgress,
       today,
       week,
     };
   }
 
   async function getDashboardState() {
-    const profile = read(KEYS.profile, null);
-    const plan = read(KEYS.plan, null);
+    const profile = Rana.storage.getProfile();
+    const plan = Rana.storage.getPlan();
 
     if (!profile || !plan || plan.status !== "active") {
       console.warn(
-        "Rana.storage.getDashboardState: no active profile/plan in localStorage — " +
+        "Rana.dashboard.getDashboardState: no active profile/plan in localStorage — " +
         "showing the day-1 fixture instead of real data. Complete the questionnaire " +
         "(onboarding.html) through the results screen's lock-in to wire this up."
       );

@@ -41,6 +41,15 @@ Rana.game = (() => {
     // (the estimated-max formula gets unreliable with very high reps).
     MAX_COUNTED_REPS: 15,
 
+    // A freestyle (or cut-short) workout needs at least this many logged sets
+    // to count as a real session: it earns flat session XP and holds the
+    // streak. Below it, nothing — one set of curls isn't a workout.
+    FREESTYLE_MIN_SETS: 3,
+
+    // A strength gain this big (in %) gets the big "NEW RECORD" moment on the
+    // summary screen. Smaller gains still earn their XP, just with a quieter pop.
+    NEW_RECORD_PERCENT: 5,
+
     // INT ("following the plan") points per completed session. A stand-in
     // until PRD open question 13.3 (calibration / INT) is decided.
     INT_POINTS_PER_SESSION: 4,
@@ -119,67 +128,99 @@ Rana.game = (() => {
 
     const weighted = counted.filter((s) => Number(s.weight) > 0);
     if (weighted.length > 0) {
-      const best = Math.max(...weighted.map((s) => estimatedOneRepMax(Number(s.weight), Number(s.reps))));
-      return { mode: "weighted", score: best };
+      let bestSet = weighted[0];
+      let best = estimatedOneRepMax(Number(bestSet.weight), Number(bestSet.reps));
+      for (const s of weighted) {
+        const e1rm = estimatedOneRepMax(Number(s.weight), Number(s.reps));
+        if (e1rm > best) { best = e1rm; bestSet = s; }
+      }
+      return { mode: "weighted", score: best, bestSet: { weight: Number(bestSet.weight), reps: Number(bestSet.reps) } };
     }
-    return { mode: "bodyweight", score: Math.max(...counted.map((s) => Number(s.reps))) };
+    let bestSet = counted[0];
+    for (const s of counted) {
+      if (Number(s.reps) > Number(bestSet.reps)) bestSet = s;
+    }
+    return { mode: "bodyweight", score: Number(bestSet.reps), bestSet: { weight: 0, reps: Number(bestSet.reps) } };
   }
 
   // ---------------------------------------------------------------------
   // The XP ledger: replays the whole history, one calendar day at a time
   // ---------------------------------------------------------------------
   //
-  // For every date from the plan's start to today, in order:
-  //   - Training day, at least half the prescribed sets logged → the streak
-  //     goes up by 1, and you earn SESSION_XP plus the streak boost.
-  //   - Training day in the past that wasn't completed → missed: no session
-  //     XP, and the streak is HALVED (not reset — one sick day shouldn't
-  //     erase weeks of work).
-  //   - Today, not completed yet → nothing happens; the day isn't over.
-  //   - Rest days → skipped entirely; they never touch the streak.
-  //   - Any day with logged sets → each exercise is checked for a new
-  //     all-time best (see scoreExerciseDay above).
+  // It reads FINISHED sessions only (a workout still in progress earns
+  // nothing until the user taps Finish). The plan is a suggestion; the
+  // streak boost is the reward for following it (rules set 2026-11-25):
   //
-  // Returns the total XP plus a per-date breakdown, which is what lets the
-  // session-complete screen say exactly where that session's XP came from.
-  function computeXpLedger(allLoggedSets, plan, data, todayStr) {
+  //   Training day, suggested workout done (≥ half its prescribed sets):
+  //     session XP + the streak boost; the streak GROWS.
+  //   Training day, trained something else instead (freestyle, or a
+  //     suggested workout cut short) with at least FREESTYLE_MIN_SETS sets:
+  //     flat session XP, no boost; the streak HOLDS (neither grows nor halves).
+  //   Rest day, any workout: NO session XP, streak untouched. (So the game
+  //     never rewards skipping rest.)
+  //   Training day in the past with nothing qualifying: missed — no session
+  //     XP, and the streak is HALVED (not reset to 0).
+  //   Today, nothing yet: nothing happens; the day isn't over.
+  //
+  // Session XP is earned at most once per day, however many workouts were
+  // done. Strength increases are scored per session, on any day, planned or
+  // freestyle: every exercise keeps one record (by exercise_key), so getting
+  // stronger always counts, wherever it happened.
+  //
+  // Returns the total XP plus a per-date breakdown (`entries`) and a
+  // per-session strength breakdown (`sessionEntries`) — that's what lets the
+  // summary screen say exactly where a session's XP came from.
+  function computeXpLedger(finishedSets, finishedSessions, plan, data, todayStr) {
     const today = todayStr || Rana.plan.todayStr();
 
-    const setsByDate = new Map();
-    for (const set of allLoggedSets) {
-      const list = setsByDate.get(set.date) || [];
+    const setsBySession = new Map();
+    for (const set of finishedSets) {
+      const list = setsBySession.get(set.session_id) || [];
       list.push(set);
-      setsByDate.set(set.date, list);
+      setsBySession.set(set.session_id, list);
     }
+
+    const sessionsByDate = new Map();
+    for (const session of finishedSessions) {
+      const list = sessionsByDate.get(session.date) || [];
+      list.push(session);
+      sessionsByDate.set(session.date, list);
+    }
+    sessionsByDate.forEach((list) => list.sort((a, b) => a.started_at.localeCompare(b.started_at)));
 
     const ledger = {
       totalXp: 0,
-      entries: new Map(), // date → breakdown for that date
+      entries: new Map(), // date → breakdown for that day
+      sessionEntries: new Map(), // session_id → { increases, strengthXp }
       currentStreak: 0,
       longestStreak: 0,
-      sessionsCompleted: 0,
+      sessionsCompleted: 0, // sessions that earned session XP (planned or not)
+      plannedSessionsCompleted: 0, // suggested workouts done as prescribed (INT)
       strengthIncreaseCount: 0,
-      intPoints: 0,
     };
 
     // Per-exercise records: how many sessions logged, and the best score.
     const records = new Map();
 
     // Start at the plan's start date, or earlier if somehow there are
-    // logged sets from before it — never silently drop real work.
-    const loggedDates = [...setsByDate.keys()].sort();
-    let startStr = plan.start_date || today;
-    if (loggedDates.length && loggedDates[0] < startStr) startStr = loggedDates[0];
+    // sessions from before it — never silently drop real work.
+    const sessionDates = [...sessionsByDate.keys()].sort();
+    const planStart = plan.start_date || today;
+    let startStr = planStart;
+    if (sessionDates.length && sessionDates[0] < startStr) startStr = sessionDates[0];
 
     const cursor = new Date(startStr + "T00:00:00");
     for (let dateStr = startStr; dateStr <= today; ) {
-      const daySets = setsByDate.get(dateStr) || [];
+      const daySessions = sessionsByDate.get(dateStr) || [];
       const entry = {
         date: dateStr,
         isTrainingDay: false,
-        completed: false,
+        restDay: false,
+        completed: false, // the suggested workout was done as prescribed
+        offPlan: false, // trained something else; streak held
         missed: false,
         streak: 0,
+        xpSessionId: null, // which session earned today's session XP
         sessionXp: 0,
         streakBonusXp: 0,
         streakMultiplier: 1,
@@ -189,66 +230,97 @@ Rana.game = (() => {
       };
 
       // --- Consistency ---
-      const session = Rana.plan.getSessionForDate(dateStr, plan, data, daySets);
-      if (!session.isRestDay) {
+      const scheduled = Rana.plan.getSessionForDate(dateStr, plan, data, daySessions);
+      if (scheduled.isRestDay) {
+        entry.restDay = true; // workouts here still earn strength XP, below
+      } else {
         entry.isTrainingDay = true;
 
-        // Count only prescribed sets: extra sets beyond the prescription
-        // don't push a session over the line.
-        const prescribed = session.slots.reduce((sum, s) => sum + s.working_sets, 0);
-        const credited = session.slots.reduce((sum, slot) => {
-          const logged = daySets.filter((s) => s.slot_id === slot.slot_id).length;
-          return sum + Math.min(logged, slot.working_sets);
-        }, 0);
-        const fraction = prescribed > 0 ? credited / prescribed : 0;
+        // The suggested workout counts as done once at least half its
+        // prescribed sets are logged. Extra sets beyond the prescription
+        // don't push it over the line.
+        const prescribed = scheduled.slots.reduce((sum, s) => sum + s.working_sets, 0);
+        let plannedDone = null;
+        for (const s of daySessions.filter((x) => x.type === "planned")) {
+          const sets = setsBySession.get(s.session_id) || [];
+          const credited = scheduled.slots.reduce((sum, slot) => {
+            const logged = sets.filter((x) => x.slot_id === slot.slot_id).length;
+            return sum + Math.min(logged, slot.working_sets);
+          }, 0);
+          if (prescribed > 0 && credited / prescribed >= XP_RULES.COMPLETION_THRESHOLD) {
+            plannedDone = s;
+            break;
+          }
+        }
+        // Any other session with enough sets counts as "trained, off-plan".
+        const offPlanSession = daySessions.find(
+          (s) => (setsBySession.get(s.session_id) || []).length >= XP_RULES.FREESTYLE_MIN_SETS
+        );
 
-        if (fraction >= XP_RULES.COMPLETION_THRESHOLD) {
+        if (plannedDone) {
           entry.completed = true;
+          entry.xpSessionId = plannedDone.session_id;
           ledger.currentStreak += 1;
           ledger.longestStreak = Math.max(ledger.longestStreak, ledger.currentStreak);
           ledger.sessionsCompleted += 1;
-          ledger.intPoints += XP_RULES.INT_POINTS_PER_SESSION;
+          ledger.plannedSessionsCompleted += 1;
 
           const boostedSessions = Math.min(ledger.currentStreak, XP_RULES.STREAK_MAX_SESSIONS);
           entry.streakMultiplier = 1 + boostedSessions * XP_RULES.STREAK_STEP;
           entry.sessionXp = XP_RULES.SESSION_XP;
           entry.streakBonusXp = Math.round(XP_RULES.SESSION_XP * (entry.streakMultiplier - 1));
-        } else if (dateStr < today && dateStr >= (plan.start_date || startStr)) {
+        } else if (offPlanSession) {
+          entry.offPlan = true;
+          entry.xpSessionId = offPlanSession.session_id;
+          ledger.sessionsCompleted += 1;
+          entry.sessionXp = XP_RULES.SESSION_XP; // flat: no streak boost off-plan
+        } else if (dateStr < today && dateStr >= planStart) {
           entry.missed = true;
           ledger.currentStreak = Math.floor(ledger.currentStreak / 2);
         }
       }
       entry.streak = ledger.currentStreak;
 
-      // --- Strength increases ---
-      const setsByExercise = new Map();
-      for (const set of daySets) {
-        const list = setsByExercise.get(set.exercise_key) || [];
-        list.push(set);
-        setsByExercise.set(set.exercise_key, list);
-      }
-      setsByExercise.forEach((sets, exerciseKey) => {
-        const result = scoreExerciseDay(sets);
-        if (!result) return;
+      // --- Strength increases: scored per session, in the order they happened ---
+      for (const session of daySessions) {
+        const sessionEntry = { increases: [], strengthXp: 0 };
 
-        const recordKey = `${exerciseKey}:${result.mode}`;
-        const record = records.get(recordKey) || { sessions: 0, best: 0 };
-
-        const pastCalibration = record.sessions >= XP_RULES.CALIBRATION_SESSIONS;
-        if (pastCalibration && record.best > 0 && result.score > record.best) {
-          const percent = ((result.score - record.best) / record.best) * 100;
-          const xp = Math.min(XP_RULES.MAX_XP_PER_EXERCISE, Math.round(percent * XP_RULES.XP_PER_PERCENT));
-          if (xp > 0) {
-            entry.increases.push({ exerciseKey, mode: result.mode, percent, xp });
-            entry.strengthXp += xp;
-            ledger.strengthIncreaseCount += 1;
-          }
+        const setsByExercise = new Map();
+        for (const set of setsBySession.get(session.session_id) || []) {
+          const list = setsByExercise.get(set.exercise_key) || [];
+          list.push(set);
+          setsByExercise.set(set.exercise_key, list);
         }
+        setsByExercise.forEach((sets, exerciseKey) => {
+          const result = scoreExerciseDay(sets);
+          if (!result) return;
 
-        record.best = Math.max(record.best, result.score);
-        record.sessions += 1;
-        records.set(recordKey, record);
-      });
+          const recordKey = `${exerciseKey}:${result.mode}`;
+          const record = records.get(recordKey) || { sessions: 0, best: 0 };
+
+          const pastCalibration = record.sessions >= XP_RULES.CALIBRATION_SESSIONS;
+          if (pastCalibration && record.best > 0 && result.score > record.best) {
+            const percent = ((result.score - record.best) / record.best) * 100;
+            const xp = Math.min(XP_RULES.MAX_XP_PER_EXERCISE, Math.round(percent * XP_RULES.XP_PER_PERCENT));
+            if (xp > 0) {
+              sessionEntry.increases.push({
+                exerciseKey, mode: result.mode, percent, xp,
+                bestSet: result.bestSet, sessionId: session.session_id,
+              });
+              sessionEntry.strengthXp += xp;
+              ledger.strengthIncreaseCount += 1;
+            }
+          }
+
+          record.best = Math.max(record.best, result.score);
+          record.sessions += 1;
+          records.set(recordKey, record);
+        });
+
+        ledger.sessionEntries.set(session.session_id, sessionEntry);
+        entry.increases.push(...sessionEntry.increases);
+        entry.strengthXp += sessionEntry.strengthXp;
+      }
 
       entry.totalXp = entry.sessionXp + entry.streakBonusXp + entry.strengthXp;
       ledger.totalXp += entry.totalXp;
@@ -293,10 +365,10 @@ Rana.game = (() => {
     return Math.floor(4 * Math.sqrt(points));
   }
 
-  // Stat points earned from real logged sets. INT comes from completed
-  // sessions (following the plan), which the XP ledger counts — so pass
-  // ledger.sessionsCompleted in.
-  function computeStatPoints(loggedSets, exerciseByKey, sessionsCompleted) {
+  // Stat points earned from real logged sets (pass FINISHED sets only). INT
+  // comes from suggested workouts done as prescribed — "following the plan" —
+  // which the XP ledger counts, so pass ledger.plannedSessionsCompleted in.
+  function computeStatPoints(loggedSets, exerciseByKey, plannedSessionsCompleted) {
     const points = { STR: 0, AGI: 0, VIT: 0, INT: 0 };
 
     for (const set of loggedSets) {
@@ -317,7 +389,7 @@ Rana.game = (() => {
       if (repsNum >= 12) points.AGI += 1;
     }
 
-    points.INT = (sessionsCompleted || 0) * XP_RULES.INT_POINTS_PER_SESSION;
+    points.INT = (plannedSessionsCompleted || 0) * XP_RULES.INT_POINTS_PER_SESSION;
     return points;
   }
 

@@ -9,17 +9,46 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="screen">
+  <!--
+    Tap anywhere on the page to skip the XP reveal straight to its final
+    state. People who've asked their device for reduced motion get that
+    final state right away (same approach as the analysis page).
+  -->
+  <main class="screen" id="summary-screen">
     <p class="system-label">[ SYSTEM ]</p>
     <h1 class="system-heading">SESSION COMPLETE</h1>
 
-    <p id="xp-gain" class="xp-gain num">+0 XP</p>
+    <!-- What you just did: title, kind, and the headline numbers. -->
+    <header class="recap-head">
+      <p id="recap-kind" class="today-eyebrow"></p>
+      <h2 id="recap-title" class="recap-title"></h2>
+      <p id="recap-meta" class="recap-meta"></p>
+    </header>
 
-    <!-- Where this session's XP came from, one line per source. -->
-    <ul id="xp-breakdown" class="panel xp-breakdown"></ul>
+    <!-- The XP reveal: lines land one at a time while the total counts up;
+         big gains get a "NEW RECORD" moment; the level bar fills last. -->
+    <section id="xp-panel" class="panel xp-panel" aria-label="XP gained">
+      <p class="today-eyebrow">XP gained</p>
+      <p id="xp-total" class="xp-total num" aria-live="polite">+0 XP</p>
+      <ul id="xp-lines" class="xp-lines"></ul>
+
+      <div class="xp-level">
+        <div class="xp-level-row">
+          <span id="xp-level-label" class="xp-level-label"></span>
+          <span id="xp-level-progress" class="xp-level-progress num"></span>
+        </div>
+        <div id="xp-bar" class="stat-bar"></div>
+      </div>
+    </section>
 
     <!-- Shown only when this session earned a new title. -->
     <p id="title-earned" class="title-earned" hidden></p>
+
+    <!-- Every exercise and set from this workout. -->
+    <section class="panel recap-panel" aria-label="Your workout">
+      <p class="today-eyebrow">Your workout</p>
+      <ul id="recap-exercises" class="recap-exercises"></ul>
+    </section>
 
     <div id="stat-gains" class="panel"></div>
 

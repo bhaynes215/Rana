@@ -810,7 +810,8 @@ fieldset label input[type="checkbox"] {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  z-index: 10;
+  /* Above the dashboard's sticky top bar (z-index 20), below the exercise picker (40). */
+  z-index: 30;
 }
 
 .modal-backdrop[hidden] {
@@ -1305,4 +1306,499 @@ fieldset label input[type="checkbox"] {
   .field-row {
     flex-direction: row;
   }
+}
+
+/* =====================================================================
+   Workout-first update (2026-11-25): suggested vs. freestyle workouts
+   ===================================================================== */
+
+/* A small text-only button for low-key actions (Discard, Remove). */
+.btn-quiet {
+  padding: 6px 4px;
+  background: none;
+  border: 0;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.btn-quiet:hover {
+  color: var(--breach);
+}
+
+/* Logging screen header: title on the left, Discard on the right. */
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Rows of sets inside a card. */
+.set-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.freestyle-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-set-btn {
+  margin-top: 4px;
+}
+
+/* "Heads up: this exercise loads your knee…" under a suggested exercise. */
+.slot-caution {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 2px solid #ffd447;
+  background-color: rgba(255, 212, 71, 0.06);
+  font-size: 0.8rem;
+  color: #e8d38a;
+}
+.slot-caution[hidden] {
+  display: none;
+}
+
+.session-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* ---- Dashboard: resume banner ---- */
+.resume-banner {
+  margin-bottom: 14px;
+  border-color: #ffd447;
+  box-shadow: 0 0 20px rgba(255, 212, 71, 0.12);
+}
+.resume-banner[hidden] {
+  display: none;
+}
+.resume-title {
+  margin: 4px 0 12px;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+.resume-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+
+/* ---- Dashboard: the freestyle button under the suggested workout ---- */
+.session-freestyle {
+  margin-top: 10px;
+}
+.session-freestyle[hidden],
+.session-card .btn-continue[hidden] {
+  display: none;
+}
+.session-card .session-note {
+  margin-top: 4px;
+}
+
+/* A past training day where something else was done instead: counts as
+   trained (never "missed"), shown with a dashed green outline. */
+.microcycle-day[data-state="off-plan"] {
+  border: 1px dashed rgba(74, 222, 128, 0.55);
+}
+.microcycle-day[data-state="off-plan"] .microcycle-day-marker {
+  background-color: transparent;
+  border: 1px solid var(--vitality);
+}
+.microcycle-day[data-state="off-plan"] .microcycle-day-label {
+  color: var(--vitality);
+}
+
+/* ---- "Name your workout" prompt ---- */
+.name-modal {
+  width: 100%;
+  max-width: 360px;
+}
+.name-modal-heading {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+.name-modal input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 14px;
+  background-color: var(--void);
+  border: 1px solid rgba(63, 233, 255, 0.35);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+.name-modal-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+
+/* ---- Exercise picker (freestyle) ----
+   A full-screen panel: Cancel / title, a search box, a list that is either
+   the seven muscle groups or one group's exercises, and a footer button
+   showing how many exercises are selected. */
+body.picker-open {
+  overflow: hidden;
+}
+
+.picker {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--void);
+  outline: none;
+}
+
+.picker-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 14px 16px 10px;
+}
+.picker-title {
+  margin: 0;
+  font-size: 1.05rem;
+  text-align: center;
+}
+.picker-cancel {
+  justify-self: start;
+  padding: 8px 14px;
+  background: none;
+  border: 1px solid rgba(63, 233, 255, 0.3);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.picker-search {
+  padding: 0 16px 10px;
+}
+.picker-search input {
+  width: 100%;
+  padding: 12px 14px;
+  background-color: var(--panel);
+  border: 1px solid rgba(63, 233, 255, 0.25);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+.picker-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+  border-top: 1px solid rgba(63, 233, 255, 0.12);
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 4px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(63, 233, 255, 0.12);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-row-name {
+  flex: 1;
+}
+.picker-row-count {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.picker-chevron {
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.picker-chevron--back {
+  margin-right: 2px;
+}
+.picker-row--back {
+  color: var(--system-cyan);
+  font-family: var(--font-display);
+}
+
+/* An exercise row: name, equipment tag, then a check once selected. */
+.picker-row--exercise {
+  padding: 13px 4px;
+  font-size: 0.95rem;
+}
+.picker-tag {
+  padding: 2px 7px;
+  border: 1px solid rgba(63, 233, 255, 0.25);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.picker-row-state {
+  min-width: 3.2rem;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.picker-row--exercise[aria-pressed="true"] {
+  background-color: rgba(63, 233, 255, 0.08);
+  box-shadow: inset 2px 0 0 var(--system-cyan);
+}
+.picker-row--exercise[aria-pressed="true"] .picker-row-state::before {
+  content: "✓";
+  color: var(--system-cyan);
+  font-size: 1.1rem;
+}
+.picker-row--exercise:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.picker-empty {
+  padding: 24px 4px;
+  color: var(--text-dim);
+}
+
+.picker-footer {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(63, 233, 255, 0.12);
+  background-color: var(--panel);
+}
+
+/* ---- Session complete: the game-style summary (2026-11-25) ---- */
+
+.recap-head {
+  margin-bottom: 16px;
+}
+.recap-title {
+  margin: 4px 0 4px;
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+.recap-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* The XP panel: the big total, the lines, and the level bar. */
+.xp-panel {
+  margin-bottom: 16px;
+}
+.xp-total {
+  margin: 2px 0 10px;
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--system-cyan);
+  text-shadow: 0 0 18px rgba(63, 233, 255, 0.35);
+  transform-origin: left center;
+}
+
+.xp-lines {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+.xp-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 8px 10px;
+  border-left: 2px solid rgba(63, 233, 255, 0.35);
+  border-bottom: 1px solid rgba(63, 233, 255, 0.1);
+  animation: xp-line-in 0.28s ease-out both;
+}
+.xp-line-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.xp-line-name {
+  font-size: 0.95rem;
+}
+.xp-line-detail {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.xp-line-xp {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--system-cyan);
+  white-space: nowrap;
+}
+
+/* A quiet small gain. */
+.xp-line--increase .xp-line-xp {
+  color: var(--text);
+}
+
+/* A NEW RECORD: bigger, brighter, with a glow. */
+.xp-line--record {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  border-left-color: var(--system-cyan);
+  background: linear-gradient(90deg, rgba(63, 233, 255, 0.14), transparent 80%);
+  box-shadow: inset 0 0 24px rgba(63, 233, 255, 0.08);
+}
+.xp-line--record .xp-line-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+.xp-line--record .xp-line-xp {
+  font-size: 1.5rem;
+  text-shadow: 0 0 14px rgba(63, 233, 255, 0.6);
+}
+
+/* The streak/adherence combo. */
+.xp-line--combo {
+  border-left-color: #ffd447;
+}
+.xp-line--combo .xp-line-name {
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  color: #ffd447;
+}
+.xp-line--combo .xp-line-xp {
+  color: #ffd447;
+}
+
+/* Explanations with no XP attached. */
+.xp-line--note {
+  border-left-color: transparent;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.xp-line--note .xp-line-name {
+  font-size: 0.85rem;
+}
+
+.xp-badge {
+  padding: 1px 7px;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  animation: xp-badge-slam 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) 0.1s both;
+}
+.xp-badge--record {
+  color: var(--void);
+  background-color: var(--system-cyan);
+  box-shadow: 0 0 12px rgba(63, 233, 255, 0.6);
+}
+.xp-badge--max {
+  color: var(--void);
+  background-color: #ff6ad5;
+  box-shadow: 0 0 12px rgba(255, 106, 213, 0.6);
+}
+
+@keyframes xp-line-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes xp-badge-slam {
+  from { opacity: 0; transform: scale(2.2); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* The level bar under the lines. */
+.xp-level-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.xp-level-label {
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+.xp-level-progress {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* The workout recap: every exercise, its sets as chips. */
+.recap-panel {
+  margin-bottom: 16px;
+}
+.recap-exercises {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.recap-exercise {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(63, 233, 255, 0.1);
+}
+.recap-exercise:last-child {
+  border-bottom: 0;
+}
+.recap-exercise-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.recap-exercise-name {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+}
+.recap-best-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--system-cyan);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--system-cyan);
+}
+.recap-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.recap-set {
+  padding: 3px 9px;
+  background-color: var(--panel-raised);
+  border: 1px solid rgba(63, 233, 255, 0.18);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.recap-set--best {
+  border-color: var(--system-cyan);
+  color: var(--system-cyan);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-line,
+  .xp-badge {
+    animation: none;
+  }
+}
+
+/* An element's `hidden` attribute loses to a class that sets `display`, so
+   the rest-day card's empty "Slots / Working sets / Est. time" and "Stat
+   yield" rows stayed visible. Make hidden win for them. */
+.session-meta[hidden],
+.session-yield[hidden] {
+  display: none;
 }

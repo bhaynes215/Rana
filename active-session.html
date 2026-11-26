@@ -3,21 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Log Session — Rana</title>
+  <title>Logging — Rana</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="screen">
-    <div>
-      <p class="today-eyebrow">Logging</p>
-      <h1 id="session-title" class="hud-name"></h1>
+    <div class="session-header">
+      <div>
+        <p id="session-eyebrow" class="today-eyebrow">Logging</p>
+        <h1 id="session-title" class="hud-name"></h1>
+      </div>
+      <button id="discard-btn" type="button" class="btn-quiet">Discard</button>
     </div>
 
+    <!-- Suggested workout: one card per prescribed slot. Freestyle: one card
+         per exercise the user added. Built by active-session.js. -->
     <div id="slot-list"></div>
 
+    <!-- Freestyle only: shown when the workout has no exercises yet, and the
+         button that opens the exercise picker. -->
+    <p id="empty-note" class="session-note" hidden>Add your first exercise to get started.</p>
+    <button id="add-exercises-btn" type="button" class="btn-secondary" hidden>+ Add exercises</button>
+
     <button id="finish-btn" type="button" class="btn-continue">Finish session</button>
+    <p id="finish-note" class="status-message status-message--error" aria-live="polite"></p>
 
     <div id="difficulty-panel" class="panel" hidden>
       <p class="slot-pattern">How did that feel?</p>
@@ -34,6 +45,8 @@
   <script src="data.js" defer></script>
   <script src="storage.js" defer></script>
   <script src="plan.js" defer></script>
+  <script src="game.js" defer></script>
+  <script src="exercise-picker.js" defer></script>
   <script src="active-session.js" defer></script>
 </body>
 </html>

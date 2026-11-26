@@ -1,31 +1,45 @@
-// Leveling system check: runs the app's REAL plan.js + game.js (no copies
-// of the formulas) against fake workout histories, then prints PASS/FAIL
-// for each rule plus a 3-year simulation. No dependencies beyond Node.
+// Leveling + sessions check: runs the app's REAL storage.js, plan.js and
+// game.js (no copies of the formulas) against fake workout histories, then
+// prints PASS/FAIL for each rule plus a 3-year simulation. No dependencies
+// beyond Node.
 //
 // Usage, from the project folder:
 //   node scripts/test_leveling.js
 //
-// Run it after changing anything in XP_RULES or the level curve in
-// game.js. Exits non-zero if any check fails, like validate_library.py.
+// Run it after changing anything in XP_RULES, the level curve, the session
+// rules or the limitation logic. Exits non-zero if any check fails, like
+// validate_library.py.
 //
-// How it works: game.js and plan.js are written for the browser (they
-// attach to `window.Rana`), so this loads them into a sandbox with a fake
-// `window` using Node's built-in `vm` module, and builds the same lookup
-// maps data.js builds from data/*.json.
+// How it works: these files are written for the browser (they attach to
+// `window.Rana` and storage.js uses `localStorage`), so this loads them into
+// a sandbox with a fake `window` and a fake `localStorage` using Node's
+// built-in `vm` module, and builds the same lookup maps data.js builds from
+// data/*.json.
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
 const dir = process.argv[2] || path.join(__dirname, "..");
-const ctx = { window: {}, console, Math, Date, Map, Set, Number, String };
+
+const store = new Map();
+const ctx = {
+  console, Math, Date, Map, Set, Number, String, Object, Array, JSON,
+  localStorage: {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  },
+};
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const f of ["plan.js", "game.js"]) {
+for (const f of ["storage.js", "plan.js", "game.js"]) {
   vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx);
 }
 const { Rana } = ctx;
+
 const j = (f) => JSON.parse(fs.readFileSync(path.join(dir, "data", f), "utf8"));
 const exercises = j("exercises.json"), splits = j("splits.json"), workouts = j("workouts.json"), slotsDoc = j("slots.json");
+const limitationsDoc = j("exercise_limitations.json");
 const group = (arr, key) => { const m = new Map(); arr.forEach((x) => { const l = m.get(x[key]) || []; l.push(x); m.set(x[key], l); }); return m; };
 const data = {
   slots: slotsDoc.slots,
@@ -33,6 +47,7 @@ const data = {
   workoutById: new Map(workouts.map((w) => [w.workout_id, w])),
   slotsByWorkout: group(slotsDoc.slots, "workout_id"),
   optionsBySlot: group(slotsDoc.slot_options, "slot_id"),
+  limitationsByExercise: new Map(Object.entries(limitationsDoc.tags)),
 };
 data.slotsByWorkout.forEach((l) => l.sort((a, b) => a.slot_order - b.slot_order));
 data.optionsBySlot.forEach((l) => l.sort((a, b) => a.option_rank - b.option_rank));
@@ -45,112 +60,262 @@ const addDays = (s, n) => { const d = new Date(s + "T00:00:00"); d.setDate(d.get
 let failures = 0;
 const check = (label, cond, detail = "") => { console.log(`${cond ? "PASS" : "FAIL"}  ${label}${detail ? "  — " + detail : ""}`); if (!cond) failures++; };
 
-// ---------- 1. Simulation: 4 days/week for 3 years, never missing ----------
+// ---- Builders for fake finished sessions + their sets ----
+let idCounter = 0;
+function makeSession(date, type, workoutId = null, title = null) {
+  idCounter += 1;
+  return {
+    session_id: `s_test_${idCounter}`, date, type, title, workout_id: workoutId,
+    started_at: `${date}T1${idCounter % 10}:00:00.000Z`, finished_at: `${date}T1${idCounter % 10}:45:00.000Z`,
+    exercises: [], difficulty: null,
+  };
+}
+// A suggested workout done as prescribed. `overrides` lets a test change
+// the weight/reps of one exercise (by key).
+function plannedSession(plan, date, overrides = {}) {
+  const sched = Rana.plan.getSessionForDate(date, plan, data, []);
+  const session = makeSession(date, "planned", sched.workoutId);
+  const sets = [];
+  sched.slots.forEach((slot) => {
+    const key = data.optionsBySlot.get(slot.slot_id)[0].exercise_key;
+    const o = overrides[key] || {};
+    for (let k = 0; k < slot.working_sets; k++) {
+      sets.push({ session_id: session.session_id, date, slot_id: slot.slot_id, exercise_key: key, set_index: k + 1,
+        weight: o.weight ?? 50, reps: o.reps ?? 10 });
+    }
+  });
+  return { session, sets };
+}
+function freestyleSession(date, exerciseKey, nSets, weight = 60, reps = 10) {
+  const session = makeSession(date, "freestyle", null, "Arm day");
+  session.exercises = [exerciseKey];
+  const sets = [];
+  for (let k = 0; k < nSets; k++) sets.push({ session_id: session.session_id, date, slot_id: null, exercise_key: exerciseKey, set_index: k + 1, weight, reps });
+  return { session, sets };
+}
+function ledgerOf(parts, plan, today) {
+  const sessions = parts.map((p) => p.session);
+  const sets = parts.flatMap((p) => p.sets);
+  return Rana.game.computeXpLedger(sets, sessions, plan, data, today);
+}
+
+// ---------- 1. Simulation: 4 days/week for 3 years, always the suggested workout ----------
 const four = splits.find((s) => s.days_per_week === 4);
 const START = "2027-01-04"; // a Monday
 const plan4 = makePlan(four.split_id, ["Mon", "Tue", "Thu", "Fri"], START);
-const sets = [];
+const simParts = [];
 const baseE1rm = new Map();
 const END = addDays(START, 3 * 364 - 1);
-for (let d = START, week = 0, i = 0; d <= END; i++, d = addDays(START, i)) {
-  week = Math.floor(i / 7);
+for (let i = 0, d = START; d <= END; i++, d = addDays(START, i)) {
+  const week = Math.floor(i / 7);
   const s = Rana.plan.getSessionForDate(d, plan4, data, []);
   if (s.isRestDay) continue;
   const deload = week % 6 === 5;
+  const overrides = {};
   s.slots.forEach((slot) => {
     const key = data.optionsBySlot.get(slot.slot_id)[0].exercise_key;
     if (!baseE1rm.has(key)) baseE1rm.set(key, 100);
     // Strength curve: about +60% over the long run, most of it in year 1.
     const target = baseE1rm.get(key) * (1 + 0.6 * (1 - Math.exp(-week / 40))) * (deload ? 0.85 : 1);
-    const reps = 8;
-    const weight = Math.floor(target / (1 + reps / 30) / 5) * 5;
-    for (let k = 0; k < slot.working_sets; k++) {
-      sets.push({ date: d, slot_id: slot.slot_id, exercise_key: key, weight, reps, rep_range: slot.rep_range });
-    }
+    overrides[key] = { reps: 8, weight: Math.floor(target / (1 + 8 / 30) / 5) * 5 };
   });
+  simParts.push(plannedSession(plan4, d, overrides));
 }
-const ledger = Rana.game.computeXpLedger(sets, plan4, data, END);
+const ledger = ledgerOf(simParts, plan4, END);
 const level = Rana.game.levelForXp(ledger.totalXp);
 const strengthXp = [...ledger.entries.values()].reduce((a, e) => a + e.strengthXp, 0);
 console.log(`\nSimulated ${four.split_name} (4 days/wk), 3 years, no misses:`);
 console.log(`  sessions ${ledger.sessionsCompleted}, total XP ${ledger.totalXp.toLocaleString()} (strength ${strengthXp.toLocaleString()}), level ${level}, tier ${Rana.game.tierForLevel(level)}`);
 for (const [label, days] of [["1 year", 364], ["2 years", 728]]) {
-  const l = Rana.game.computeXpLedger(sets.filter((s) => s.date < addDays(START, days)), plan4, data, addDays(START, days - 1));
+  const cutoff = addDays(START, days);
+  const parts = simParts.filter((p) => p.session.date < cutoff);
+  const l = ledgerOf(parts, plan4, addDays(START, days - 1));
   const lv = Rana.game.levelForXp(l.totalXp);
   console.log(`  at ${label}: level ${lv} (${Rana.game.tierForLevel(lv)})`);
 }
 check("3 years at 4 days/week lands near Mythic (Level 49-53)", level >= 49 && level <= 53, `level ${level}`);
 check("titles earned after 3 years", Rana.game.earnedTitles(ledger).length === 4, Rana.game.earnedTitles(ledger).map((t) => t.name).join(", "));
 
-// ---------- 2. Rule checks on a small hand-built history ----------
+// ---------- 2. Consistency and strength rules on a small hand-built history ----------
 const three = splits.find((s) => s.days_per_week === 3);
-const S2 = "2027-01-04";
+const S2 = "2027-01-04"; // Monday
 const plan3 = makePlan(three.split_id, ["Mon", "Wed", "Fri"], S2);
-const mon = Rana.plan.getSessionForDate(S2, plan3, data, []);
-const slot = mon.slots[0];
-const benchKey = data.optionsBySlot.get(slot.slot_id)[0].exercise_key;
-const fullSession = (date, weight, reps) => {
-  const out = [];
-  const s = Rana.plan.getSessionForDate(date, plan3, data, []);
-  s.slots.forEach((sl) => {
-    const key = data.optionsBySlot.get(sl.slot_id)[0].exercise_key;
-    for (let k = 0; k < sl.working_sets; k++) {
-      out.push({ date, slot_id: sl.slot_id, exercise_key: key, weight: key === benchKey ? weight : 50, reps: key === benchKey ? reps : 10 });
-    }
-  });
-  return out;
-};
-// Four Mondays: 185x6 three times (calibration), then 185x7.
-let h = [];
+const benchKey = data.optionsBySlot.get(Rana.plan.getSessionForDate(S2, plan3, data, []).slots[0].slot_id)[0].exercise_key;
 const mondays = [0, 7, 14, 21].map((n) => addDays(S2, n));
-mondays.slice(0, 3).forEach((d) => (h = h.concat(fullSession(d, 185, 6))));
-// Wed/Fri of weeks 1-3 done too, so the streak stays intact.
-[2, 4, 9, 11, 16, 18].forEach((n) => (h = h.concat(fullSession(addDays(S2, n), 0, 0))));
-let L = Rana.game.computeXpLedger(h, plan3, data, mondays[2]);
+const lowerOnly = { [benchKey]: { weight: 185, reps: 6 } };
+
+// Weeks 1-3: all three sessions every week, bench 185x6 on Mondays.
+let h = [];
+for (let w = 0; w < 3; w++) {
+  h.push(plannedSession(plan3, addDays(S2, w * 7), lowerOnly));
+  h.push(plannedSession(plan3, addDays(S2, w * 7 + 2)));
+  h.push(plannedSession(plan3, addDays(S2, w * 7 + 4)));
+}
+let L = ledgerOf(h, plan3, addDays(S2, 20));
 check("no strength XP during the 3 calibration sessions", [...L.entries.values()].every((e) => e.strengthXp === 0));
-h = h.concat(fullSession(mondays[3], 185, 7));
-L = Rana.game.computeXpLedger(h, plan3, data, mondays[3]);
+
+const week4Mon = plannedSession(plan3, mondays[3], { [benchKey]: { weight: 185, reps: 7 } });
+L = ledgerOf(h.concat([week4Mon]), plan3, mondays[3]);
 const e4 = L.entries.get(mondays[3]);
 const benchInc = e4.increases.find((i) => i.exerciseKey === benchKey);
 check("185x6 -> 185x7 earns 28 XP (+2.8%)", benchInc && benchInc.xp === 28, benchInc ? `${benchInc.percent.toFixed(2)}% → ${benchInc.xp} XP` : "no increase found");
 check("session XP is 100 + streak bonus", e4.sessionXp === 100 && e4.streakBonusXp === Math.round(100 * Math.min(e4.streak, 10) * 0.05), `streak ${e4.streak}, bonus ${e4.streakBonusXp}`);
+check("the increase remembers which set was the best", benchInc && benchInc.bestSet.weight === 185 && benchInc.bestSet.reps === 7);
 
-// Cap: a huge jump caps at 60.
-const capH = h.concat(fullSession(addDays(S2, 28), 245, 7));
-const capE = Rana.game.computeXpLedger(capH, plan3, data, addDays(S2, 28)).entries.get(addDays(S2, 28));
+const capH = h.concat([plannedSession(plan3, mondays[3], { [benchKey]: { weight: 245, reps: 7 } })]);
+const capE = ledgerOf(capH, plan3, mondays[3]).entries.get(mondays[3]);
 check("a huge jump is capped at 60 XP", capE.increases.find((i) => i.exerciseKey === benchKey).xp === 60);
 
-// 16+ reps ignored.
-const highH = h.concat(fullSession(addDays(S2, 28), 185, 16));
-const highE = Rana.game.computeXpLedger(highH, plan3, data, addDays(S2, 28)).entries.get(addDays(S2, 28));
+const highH = h.concat([plannedSession(plan3, mondays[3], { [benchKey]: { weight: 185, reps: 16 } })]);
+const highE = ledgerOf(highH, plan3, mondays[3]).entries.get(mondays[3]);
 check("sets of 16+ reps don't count toward strength XP", !highE.increases.find((i) => i.exerciseKey === benchKey));
 
-// Missing halves the streak: miss Wed + Fri of week 4.
-const missL = Rana.game.computeXpLedger(h, plan3, data, addDays(S2, 26));
-const streakBefore = L.entries.get(mondays[3]).streak;
-check("two misses halve the streak twice", missL.currentStreak === Math.floor(Math.floor(streakBefore / 2) / 2), `${streakBefore} → ${missL.currentStreak}`);
-check("missed days earn 0 XP", missL.entries.get(addDays(S2, 23)).totalXp === 0 && missL.entries.get(addDays(S2, 23)).missed);
+// Missing halves the streak: nothing logged Mon-Fri of week 4.
+const streakBefore = ledgerOf(h, plan3, addDays(S2, 20)).currentStreak;
+const missL = ledgerOf(h, plan3, addDays(S2, 26)); // through Sunday of week 4
+check("three misses halve the streak three times", missL.currentStreak === Math.floor(Math.floor(Math.floor(streakBefore / 2) / 2) / 2), `${streakBefore} → ${missL.currentStreak}`);
+check("missed days earn 0 XP", missL.entries.get(mondays[3]).totalXp === 0 && missL.entries.get(mondays[3]).missed);
 
-// Under half the sets: no session XP.
-const partial = fullSession(addDays(S2, 28), 185, 6);
-const fewSets = h.concat(partial.slice(0, Math.floor(partial.length * 0.4)));
-const partE = Rana.game.computeXpLedger(fewSets, plan3, data, addDays(S2, 28)).entries.get(addDays(S2, 28));
-check("logging under half the sets earns no session XP", partE.sessionXp === 0 && !partE.completed);
+// A suggested workout cut short (under half the sets, under 3 sets) earns nothing.
+const tiny = plannedSession(plan3, mondays[3]);
+tiny.sets = tiny.sets.slice(0, 2);
+const tinyE = ledgerOf(h.concat([tiny]), plan3, addDays(S2, 24)).entries.get(mondays[3]);
+check("a workout under 3 sets (and under half) earns no session XP and counts as missed", tinyE.sessionXp === 0 && tinyE.missed);
 
-// Today, not finished yet, is not counted as missed.
-const todayL = Rana.game.computeXpLedger(h, plan3, data, addDays(S2, 23));
-check("today in progress isn't marked missed", !todayL.entries.get(addDays(S2, 23)).missed);
+// Today, nothing yet: not counted as missed.
+const todayL = ledgerOf(h, plan3, mondays[3]);
+check("today in progress isn't marked missed", !todayL.entries.get(mondays[3]).missed);
 
 // Bodyweight: 8 -> 10 reps at 0 weight = +25%.
-let bw = [];
-[0, 7, 14, 21].forEach((n, i) => {
-  bw.push({ date: addDays(S2, n), slot_id: slot.slot_id, exercise_key: "pull_up_test", weight: 0, reps: i < 3 ? 8 : 10 });
+const bwSlot = Rana.plan.getSessionForDate(S2, plan3, data, []).slots[0];
+const bwParts = [0, 7, 14, 21].map((n, i) => {
+  const date = addDays(S2, n);
+  const session = makeSession(date, "freestyle", null, "Pull-ups");
+  const sets = [{ session_id: session.session_id, date, slot_id: null, exercise_key: "pull_up_test", set_index: 1, weight: 0, reps: i < 3 ? 8 : 10 }];
+  return { session, sets };
 });
-const bwE = Rana.game.computeXpLedger(bw, plan3, data, addDays(S2, 21)).entries.get(addDays(S2, 21));
-const bwInc = bwE.increases[0];
+const bwInc = ledgerOf(bwParts, plan3, addDays(S2, 21)).entries.get(addDays(S2, 21)).increases[0];
 check("bodyweight 8 -> 10 reps = +25%, capped to 60 XP", bwInc && bwInc.mode === "bodyweight" && Math.round(bwInc.percent) === 25 && bwInc.xp === 60, bwInc ? `${bwInc.percent}% → ${bwInc.xp}` : "none");
 
-// Levels and tiers.
+// ---------- 3. The freestyle / rest-day rules (set 2026-11-25) ----------
+console.log("");
+const base = h.slice(0); // weeks 1-3 done in full (Mon/Wed/Fri) → streak 9
+const streakAfter3Weeks = ledgerOf(base, plan3, addDays(S2, 20)).currentStreak;
+const tuesday = addDays(S2, 22); // week 4 Tuesday: a rest day on this plan
+const mondayW4 = mondays[3];
+
+// Rest-day workout: NO session XP, streak untouched, strength XP still counts.
+const restFree = freestyleSession(tuesday, benchKey, 4, 200, 8);
+const restL = ledgerOf(base.concat([plannedSession(plan3, mondayW4), restFree]), plan3, tuesday);
+const restE = restL.entries.get(tuesday);
+check("rest-day workout earns NO session XP", restE.restDay && restE.sessionXp === 0 && restE.streakBonusXp === 0);
+check("rest-day workout leaves the streak untouched", restE.streak === restL.entries.get(mondayW4).streak);
+const restStrength = ledgerOf(base.concat([plannedSession(plan3, mondayW4, { [benchKey]: { weight: 150, reps: 6 } }), restFree]), plan3, tuesday).entries.get(tuesday);
+check("rest-day workout still earns strength XP for a real gain", restStrength.strengthXp > 0, `${restStrength.strengthXp} XP`);
+
+// Freestyle on a training day instead of the suggested workout: flat XP, streak HOLDS.
+const free3 = freestyleSession(mondayW4, "db_curl", 3);
+const freeL = ledgerOf(base.concat([free3]), plan3, addDays(S2, 24)); // through Wed of week 4 (Mon off-plan, Wed missed)
+const freeE = freeL.entries.get(mondayW4);
+check("freestyle (3 sets) on a training day earns flat session XP, no boost", freeE.offPlan && freeE.sessionXp === 100 && freeE.streakBonusXp === 0);
+check("freestyle on a training day HOLDS the streak", freeE.streak === streakAfter3Weeks, `${freeE.streak} vs ${streakAfter3Weeks}`);
+const free2 = freestyleSession(mondayW4, "db_curl", 2);
+const free2E = ledgerOf(base.concat([free2]), plan3, addDays(S2, 24)).entries.get(mondayW4);
+check("freestyle under 3 sets doesn't count (day is missed)", free2E.sessionXp === 0 && free2E.missed);
+
+// Session XP at most once per day: suggested + freestyle the same day.
+const both = ledgerOf(base.concat([plannedSession(plan3, mondayW4), freestyleSession(mondayW4, "db_curl", 5)]), plan3, mondayW4).entries.get(mondayW4);
+check("session XP is earned at most once per day (suggested workout wins)", both.sessionXp === 100 && both.completed && !both.offPlan);
+
+// ---------- 4. Sessions in storage: in-progress vs finished, discard, migration ----------
+console.log("");
+store.clear();
+Rana.storage.savePlan(plan3);
+const inProg = Rana.storage.startSession({ type: "freestyle", title: "Legs", date: mondayW4 });
+Rana.storage.addLoggedSet({ session_id: inProg.session_id, date: mondayW4, exercise_key: "leg_press", set_index: 1, weight: 200, reps: 10 });
+check("a started session is in progress", Rana.storage.getInProgressSession()?.session_id === inProg.session_id);
+check("in-progress sets don't count (getFinishedSets)", Rana.storage.getFinishedSets().length === 0 && Rana.storage.getAllLoggedSets().length === 1);
+Rana.storage.finishSession(inProg.session_id, 4);
+check("finishing makes the sets count and records difficulty", Rana.storage.getFinishedSets().length === 1 && Rana.storage.getDifficultyByDate()[mondayW4] === 4);
+const doomed = Rana.storage.startSession({ type: "freestyle", title: "Oops", date: mondayW4 });
+Rana.storage.addLoggedSet({ session_id: doomed.session_id, date: mondayW4, exercise_key: "bench", set_index: 1, weight: 100, reps: 5 });
+Rana.storage.discardSession(doomed.session_id);
+check("discarding removes the session AND its sets", !Rana.storage.getSession(doomed.session_id) && Rana.storage.getAllLoggedSets().length === 1);
+
+store.clear();
+Rana.storage.savePlan(plan3);
+store.set("rana:v1:logged_sets", JSON.stringify([
+  { date: S2, slot_id: 1, exercise_key: "bench", set_index: 1, weight: 100, reps: 8, completed_at: `${S2}T10:00:00.000Z` },
+  { date: S2, slot_id: 1, exercise_key: "bench", set_index: 2, weight: 100, reps: 8, completed_at: `${S2}T10:05:00.000Z` },
+  { date: addDays(S2, 1), slot_id: null, exercise_key: "bench", set_index: 1, weight: 90, reps: 8, completed_at: `${addDays(S2, 1)}T10:00:00.000Z` },
+]));
+store.set("rana:v1:session_feedback", JSON.stringify({ [S2]: 3 }));
+const migrated = Rana.storage.getFinishedSessions();
+check("legacy sets (no session_id) migrate into finished sessions, one per date", migrated.length === 2 && Rana.storage.getAllLoggedSets().every((s) => s.session_id));
+check("a legacy training-day workout becomes 'planned', a rest-day one 'freestyle'",
+  migrated.find((s) => s.date === S2).type === "planned" && migrated.find((s) => s.date === addDays(S2, 1)).type === "freestyle");
+check("legacy per-date difficulty moves onto the session", migrated.find((s) => s.date === S2).difficulty === 3);
+Rana.storage.getAllLoggedSets();
+check("migration is idempotent (running again adds nothing)", Rana.storage.getSessions().length === 2);
+
+// ---------- 5. Limitations shape the SUGGESTED workout only ----------
+console.log("");
+const squatSlot = slotsDoc.slots.find((s) => data.optionsBySlot.get(s.slot_id)[0].exercise_key === "back_squat");
+check("back squat is tagged for knee and lower back", (data.limitationsByExercise.get("back_squat") || []).includes("knee"));
+const noLimits = Rana.plan.pickSuggestedOption(squatSlot, data, []);
+check("no limitations: the main exercise is suggested", noLimits.exerciseKey === "back_squat" && !noLimits.substituted && noLimits.caution.length === 0);
+// Real data, caution path: the squat slot's alternatives (hack squat, goblet
+// squat) are also knee-dominant, so a knee limitation can't swap them out.
+const withKnee = Rana.plan.pickSuggestedOption(squatSlot, data, ["knee"]);
+check("real data: back squat slot + knee limitation keeps the squat with a caution (all alternatives load the knee)",
+  withKnee.exerciseKey === "back_squat" && withKnee.caution.includes("knee") && !withKnee.substituted);
+// Real data, swap path: find any slot whose main exercise loads the wrist but
+// has a wrist-friendly alternative.
+const wristSlot = slotsDoc.slots.find((s) => {
+  const opts = data.optionsBySlot.get(s.slot_id);
+  const loads = (k) => (data.limitationsByExercise.get(k) || []).includes("wrist");
+  return loads(opts[0].exercise_key) && opts.some((o) => !loads(o.exercise_key));
+});
+const wristPick = Rana.plan.pickSuggestedOption(wristSlot, data, ["wrist"]);
+check("real data: wrist limitation swaps to the first alternative that doesn't load the wrist",
+  wristPick.substituted && wristPick.caution.length === 0 && !(data.limitationsByExercise.get(wristPick.exerciseKey) || []).includes("wrist"),
+  `${data.optionsBySlot.get(wristSlot.slot_id)[0].exercise_key} → ${wristPick.exerciseKey}`);
+const fakeData = {
+  optionsBySlot: new Map([[1, [{ exercise_key: "a" }, { exercise_key: "b" }]]]),
+  limitationsByExercise: new Map([["a", ["knee"]], ["b", ["knee", "wrist"]]]),
+};
+const allConflict = Rana.plan.pickSuggestedOption({ slot_id: 1 }, fakeData, ["knee"]);
+check("every option conflicts: keeps the main exercise with a caution", allConflict.exerciseKey === "a" && allConflict.caution.join() === "knee" && !allConflict.substituted);
+// A swap never makes the workout list the same exercise twice.
+const dupData = {
+  optionsBySlot: new Map([
+    [1, [{ exercise_key: "press" }]], // slot 1 uses "press" as written
+    [2, [{ exercise_key: "deadlift_x" }, { exercise_key: "press" }, { exercise_key: "row" }]], // main conflicts; "press" is taken
+    [3, [{ exercise_key: "deadlift_y" }, { exercise_key: "press" }]], // main conflicts; the only clean alternative is taken
+  ]),
+  limitationsByExercise: new Map([["deadlift_x", ["lower-back"]], ["deadlift_y", ["lower-back"]]]),
+  exerciseByKey: new Map([["deadlift_x", { exercise_name: "Deadlift X" }]]),
+};
+const dupPicks = Rana.plan.suggestWorkout([{ slot_id: 1 }, { slot_id: 2 }, { slot_id: 3 }], dupData, ["lower-back"]);
+check("a swap skips an exercise already used earlier in the workout", dupPicks[1].exerciseKey === "row" && dupPicks[1].substituted, dupPicks[1].exerciseKey);
+check("if the only clean alternative is already used, it repeats rather than losing the swap", dupPicks[2].exerciseKey === "press" && dupPicks[2].substituted);
+// ...including exercises that a LATER slot uses as its main exercise.
+const laterData = {
+  optionsBySlot: new Map([
+    [1, [{ exercise_key: "deadlift_x" }, { exercise_key: "leg_press" }, { exercise_key: "hack" }]], // swap candidates: leg_press is slot 2's main
+    [2, [{ exercise_key: "leg_press" }]],
+  ]),
+  limitationsByExercise: new Map([["deadlift_x", ["lower-back"]]]),
+  exerciseByKey: new Map(),
+};
+const laterPicks = Rana.plan.suggestWorkout([{ slot_id: 1 }, { slot_id: 2 }], laterData, ["lower-back"]);
+check("a swap also avoids an exercise a LATER slot uses as its main", laterPicks[0].exerciseKey === "hack" && laterPicks[1].exerciseKey === "leg_press", laterPicks.map((p) => p.exerciseKey).join(", "));
+check("swap text names the original exercise and the joint", Rana.plan.swapText(dupPicks[1], dupData) === "Swapped from Deadlift X to protect your lower back.", Rana.plan.swapText(dupPicks[1], dupData));
+check("caution text names the joint", Rana.plan.cautionText(["lower-back"]).includes("lower back"));
+check("a profile's 'none' limitation is ignored", Rana.plan.activeLimitations({ limitations: ["none"] }).length === 0);
+
+// ---------- 6. Levels, tiers, stats ----------
+console.log("");
 check("level curve: L5 = 704, L50 = 105,644", Rana.game.xpForLevel(5) === 704 && Rana.game.xpForLevel(50) === 105644);
 check("levelForXp boundaries", Rana.game.levelForXp(0) === 1 && Rana.game.levelForXp(43) === 1 && Rana.game.levelForXp(44) === 2 && Rana.game.levelForXp(105644) === 50 && Rana.game.levelForXp(105643) === 49);
 check("tiers", ["SPARK", "IGNITION", "AWAKENED", "ASCENDED", "TRANSCENDENT", "MYTHIC"].join() === [1, 5, 13, 22, 36, 50].map(Rana.game.tierForLevel).join());

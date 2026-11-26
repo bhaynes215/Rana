@@ -47,6 +47,18 @@
   </header>
 
   <main class="screen dashboard-main">
+    <!-- A workout already started but not finished (today's, or one left
+         over from an earlier day). Only one workout can be in progress at a
+         time, so while this shows, the start buttons below are hidden. -->
+    <section id="resume-banner" class="panel resume-banner" hidden>
+      <p id="resume-label" class="today-eyebrow"></p>
+      <p id="resume-title" class="resume-title"></p>
+      <div class="resume-actions">
+        <button id="resume-btn" class="btn-continue" type="button">Resume</button>
+        <button id="discard-btn" class="btn-secondary" type="button">Discard</button>
+      </div>
+    </section>
+
     <div class="dashboard-grid">
 
       <!-- Session card: today's workout, left-aligned, day name is the
@@ -67,11 +79,20 @@
           <span id="yield-chips"></span>
         </div>
 
-        <!-- Rest days are prescribed and non-overridable (locked design
-             decision #1 in CLAUDE.md) — no start affordance at all, not
-             even disabled, when isRestDay is true. -->
+        <!-- Set when limitations swapped exercises or some still load a limited joint. -->
+        <p id="limitation-note" class="session-note" hidden></p>
+
+        <!-- Rest is the SUGGESTION on a rest day, not a lock (changed
+             2026-11-25; this reverses locked design decision #1). There's no
+             primary "Start" button on rest days; the quieter freestyle button
+             below sits under the quote instead. -->
         <button id="session-cta" class="btn-continue" type="button"></button>
         <p id="rest-note" class="session-focus" hidden></p>
+
+        <!-- Freestyle: the plan is a suggestion, never a requirement. On a
+             rest day this sits under the quote ("Start a workout anyway");
+             on a training day it's the quieter "Do something else". -->
+        <button id="freestyle-btn" class="btn-secondary session-freestyle" type="button"></button>
       </section>
 
       <div class="dashboard-side">
@@ -94,10 +115,23 @@
     </div>
   </main>
 
+  <!-- "Name your workout" prompt shown when starting a freestyle workout. -->
+  <div id="name-backdrop" class="modal-backdrop" hidden>
+    <form id="name-form" class="panel panel--raised name-modal" aria-labelledby="name-heading">
+      <h2 id="name-heading" class="name-modal-heading">Name your workout</h2>
+      <input id="name-input" type="text" maxlength="40" autocomplete="off" aria-label="Workout name">
+      <div class="name-modal-actions">
+        <button type="submit" class="btn-continue">Start</button>
+        <button type="button" id="name-cancel" class="btn-secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+
   <script src="data.js" defer></script>
+  <script src="storage.js" defer></script>
   <script src="plan.js" defer></script>
   <script src="game.js" defer></script>
-  <script src="js/storage.js" defer></script>
+  <script src="js/dashboard-state.js" defer></script>
   <script src="dashboard.js" defer></script>
 </body>
 </html>

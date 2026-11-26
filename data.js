@@ -19,12 +19,18 @@ Rana.data = (() => {
   async function load() {
     if (cache) return cache;
 
-    const [exercises, splits, workouts, slotsDoc] = await Promise.all([
+    const [exercises, splits, workouts, slotsDoc, limitationsDoc] = await Promise.all([
       fetch("data/exercises.json").then((r) => r.json()),
       fetch("data/splits.json").then((r) => r.json()),
       fetch("data/workouts.json").then((r) => r.json()),
       fetch("data/slots.json").then((r) => r.json()),
+      fetch("data/exercise_limitations.json").then((r) => r.json()),
     ]);
+
+    // exercise_key -> ["knee", "lower-back", ...]. Used only to pick the
+    // SUGGESTED workout's exercises around a user's reported limitations;
+    // freestyle workouts and swap buttons ignore it (see plan.js).
+    const limitationsByExercise = new Map(Object.entries(limitationsDoc.tags));
 
     const exerciseByKey = new Map(exercises.map((e) => [e.exercise_key, e]));
     const splitById = new Map(splits.map((s) => [s.split_id, s]));
@@ -66,6 +72,7 @@ Rana.data = (() => {
       workoutsBySplit,
       slotsByWorkout,
       optionsBySlot,
+      limitationsByExercise,
     };
     return cache;
   }

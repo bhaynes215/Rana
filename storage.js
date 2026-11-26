@@ -4,8 +4,24 @@
 // database later, this is the only file that has to change.
 //
 // What's saved here is the small, ever-changing stuff: the user's answers,
-// the plan they were assigned, and every set they've actually logged.
+// the plan they were assigned, and their workouts.
 // Reference data (exercises, splits) never comes through here — see data.js.
+//
+// WORKOUTS ARE TWO LISTS, LINKED BY session_id (updated 2026-11-25):
+//   - sessions: one entry per workout — the "page in the logbook". Holds the
+//     title, whether it was the suggested workout ("planned") or the user's
+//     own ("freestyle"), when it started and finished, and (for freestyle)
+//     the exercises they added.
+//   - logged sets: one entry per set actually performed, each pointing at
+//     its session via session_id.
+// They're kept separate on purpose: that's exactly how they'll become two
+// tables in a real database later, so moving to Supabase is a copy, not a
+// redesign.
+//
+// A session is "in progress" from the moment the user taps Start until they
+// tap Finish (finished_at is null until then). Only FINISHED sessions count
+// toward XP and stats — see getFinishedSets() below — so closing the tab
+// mid-workout never loses anything, and never half-awards XP either.
 //
 // Known limits (also called out in CLAUDE.md): localStorage is per-browser,
 // per-device, holds ~5MB, and is wiped if the user clears site data. Fine
@@ -18,8 +34,13 @@ Rana.storage = (() => {
     profile: "rana:v1:profile",
     plan: "rana:v1:plan",
     loggedSets: "rana:v1:logged_sets",
+    sessions: "rana:v1:sessions",
+    // Legacy: difficulty used to be saved per DATE here. It now lives on the
+    // session itself; this key is only read once, during migration below.
     sessionFeedback: "rana:v1:session_feedback",
   };
+
+  const WEEKDAYS_SUN_FIRST = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   function read(key, fallback) {
     try {
@@ -51,14 +72,129 @@ Rana.storage = (() => {
     write(KEYS.plan, plan);
   }
 
+  // --- One-time migration of older data ---
+  // Before sessions existed, sets were saved with just a date. If any set has
+  // no session_id, group those by date into one finished session each, so
+  // nothing from before is lost. Safe to run any number of times: once every
+  // set has a session_id there's nothing left to do.
+  function migrateLegacySets() {
+    const sets = read(KEYS.loggedSets, []);
+    const orphans = sets.filter((s) => !s.session_id);
+    if (orphans.length === 0) return;
+
+    const plan = read(KEYS.plan, null);
+    const feedback = read(KEYS.sessionFeedback, {});
+    const sessions = read(KEYS.sessions, []);
+
+    const byDate = new Map();
+    orphans.forEach((s) => {
+      const list = byDate.get(s.date) || [];
+      list.push(s);
+      byDate.set(s.date, list);
+    });
+
+    byDate.forEach((daySets, date) => {
+      const id = newSessionId(date);
+      const weekday = WEEKDAYS_SUN_FIRST[new Date(date + "T00:00:00").getDay()];
+      const workoutId = plan && plan.weekday_map ? plan.weekday_map[weekday] || null : null;
+      const times = daySets.map((s) => s.completed_at).filter(Boolean).sort();
+
+      sessions.push({
+        session_id: id,
+        date,
+        // A training-day workout becomes "planned"; anything else (a day
+        // with no scheduled workout) becomes "freestyle".
+        type: workoutId ? "planned" : "freestyle",
+        title: workoutId ? null : "Workout", // planned titles come from the workout's own name
+        workout_id: workoutId,
+        started_at: times[0] || `${date}T12:00:00.000Z`,
+        finished_at: times[times.length - 1] || `${date}T12:30:00.000Z`,
+        exercises: workoutId ? [] : [...new Set(daySets.map((s) => s.exercise_key))],
+        difficulty: feedback[date] ?? null,
+      });
+      daySets.forEach((s) => {
+        s.session_id = id;
+      });
+    });
+
+    write(KEYS.loggedSets, sets);
+    write(KEYS.sessions, sessions);
+  }
+
+  // --- Sessions ---
+  function newSessionId(dateStr) {
+    return `s_${dateStr.replace(/-/g, "")}_${Math.random().toString(36).slice(2, 6)}`;
+  }
+
+  function getSessions() {
+    migrateLegacySets();
+    return read(KEYS.sessions, []);
+  }
+
+  function getSession(sessionId) {
+    return getSessions().find((s) => s.session_id === sessionId) || null;
+  }
+
+  function getFinishedSessions() {
+    return getSessions().filter((s) => s.finished_at);
+  }
+
+  // At most one workout is in progress at a time.
+  function getInProgressSession() {
+    return getSessions().find((s) => !s.finished_at) || null;
+  }
+
+  // Creates the session the moment the user taps Start. `date` is the day it
+  // STARTED, so a workout running past midnight doesn't split across two days.
+  function startSession({ type, title, workout_id, date }) {
+    const sessions = getSessions();
+    const session = {
+      session_id: newSessionId(date),
+      date,
+      type, // "planned" (the suggested workout) or "freestyle"
+      title,
+      workout_id: workout_id || null,
+      started_at: new Date().toISOString(),
+      finished_at: null,
+      exercises: [], // freestyle only: exercise_keys in the order added
+      difficulty: null,
+    };
+    sessions.push(session);
+    write(KEYS.sessions, sessions);
+    return session;
+  }
+
+  function updateSession(sessionId, patch) {
+    const sessions = getSessions();
+    const session = sessions.find((s) => s.session_id === sessionId);
+    if (!session) return null;
+    Object.assign(session, patch);
+    write(KEYS.sessions, sessions);
+    return session;
+  }
+
+  function finishSession(sessionId, difficulty) {
+    return updateSession(sessionId, {
+      finished_at: new Date().toISOString(),
+      difficulty: difficulty ?? null,
+    });
+  }
+
+  // Discarding deletes the session AND its sets — no XP, no trace.
+  function discardSession(sessionId) {
+    write(KEYS.sessions, getSessions().filter((s) => s.session_id !== sessionId));
+    write(KEYS.loggedSets, read(KEYS.loggedSets, []).filter((s) => s.session_id !== sessionId));
+  }
+
   // --- Logged sets: one record per set actually performed ---
   // Stored as a flat array; date is a "YYYY-MM-DD" string so it sorts and
   // compares as plain text without needing a date-parsing library.
   function getAllLoggedSets() {
+    migrateLegacySets();
     return read(KEYS.loggedSets, []);
   }
-  function getLoggedSetsForDate(dateStr) {
-    return getAllLoggedSets().filter((s) => s.date === dateStr);
+  function getSetsForSession(sessionId) {
+    return getAllLoggedSets().filter((s) => s.session_id === sessionId);
   }
   function addLoggedSet(entry) {
     const all = getAllLoggedSets();
@@ -67,15 +203,20 @@ Rana.storage = (() => {
     return entry;
   }
 
-  // --- Session feedback: one tap, once, per date ---
-  function getSessionFeedback(dateStr) {
-    const all = read(KEYS.sessionFeedback, {});
-    return all[dateStr] ?? null;
+  // Sets from FINISHED sessions only — what XP, stats and recovery use.
+  function getFinishedSets() {
+    const finishedIds = new Set(getFinishedSessions().map((s) => s.session_id));
+    return getAllLoggedSets().filter((s) => finishedIds.has(s.session_id));
   }
-  function saveSessionFeedback(dateStr, difficulty) {
-    const all = read(KEYS.sessionFeedback, {});
-    all[dateStr] = difficulty;
-    write(KEYS.sessionFeedback, all);
+
+  // { "2026-11-25": 4, ... } — the one-tap difficulty rating by date, built
+  // from the sessions (the recovery meter wants it that way).
+  function getDifficultyByDate() {
+    const out = {};
+    getFinishedSessions().forEach((s) => {
+      if (s.difficulty != null) out[s.date] = s.difficulty;
+    });
+    return out;
   }
 
   return {
@@ -83,10 +224,18 @@ Rana.storage = (() => {
     saveProfile,
     getPlan,
     savePlan,
+    getSessions,
+    getSession,
+    getFinishedSessions,
+    getInProgressSession,
+    startSession,
+    updateSession,
+    finishSession,
+    discardSession,
     getAllLoggedSets,
-    getLoggedSetsForDate,
+    getSetsForSession,
     addLoggedSet,
-    getSessionFeedback,
-    saveSessionFeedback,
+    getFinishedSets,
+    getDifficultyByDate,
   };
 })();

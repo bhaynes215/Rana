@@ -18,8 +18,9 @@ async function main() {
 
   const data = await Rana.data.load();
   const dateStr = getDateParam();
-  const loggedForDay = Rana.storage.getLoggedSetsForDate(dateStr);
-  const session = Rana.plan.getSessionForDate(dateStr, plan, data, loggedForDay);
+  const finishedForDay = Rana.storage.getFinishedSessions().filter((s) => s.date === dateStr);
+  const session = Rana.plan.getSessionForDate(dateStr, plan, data, finishedForDay);
+  const limitations = Rana.plan.activeLimitations(profile);
 
   const dateObj = new Date(dateStr + "T00:00:00");
   document.getElementById("session-date").textContent = dateObj.toLocaleDateString(undefined, {
@@ -29,7 +30,7 @@ async function main() {
   if (session.isRestDay) {
     document.getElementById("session-title").textContent = "Rest day";
     document.getElementById("session-note").textContent =
-      "Rest days are part of the plan — there's nothing to log today.";
+      "Rest is part of the plan. You can still start a workout from the dashboard.";
     return;
   }
 
@@ -38,10 +39,13 @@ async function main() {
   const list = document.getElementById("slot-list");
   list.innerHTML = "";
 
-  session.slots.forEach((slot) => {
+  const picks = Rana.plan.suggestWorkout(session.slots, data, limitations);
+  session.slots.forEach((slot, slotIndex) => {
     const options = data.optionsBySlot.get(slot.slot_id) || [];
-    const primaryOption = options.find((o) => o.option_rank === 1);
-    const primaryExercise = primaryOption ? data.exerciseByKey.get(primaryOption.exercise_key) : null;
+    // The SUGGESTED exercise: the main one, unless it loads a joint the user
+    // reported a limitation on (limitations only ever shape the suggestion).
+    const pick = picks[slotIndex];
+    const primaryExercise = pick.exerciseKey ? data.exerciseByKey.get(pick.exerciseKey) : null;
 
     const card = document.createElement("div");
     card.className = "panel slot-card";
@@ -62,6 +66,15 @@ async function main() {
       `<span class="num">${slot.working_sets}</span> sets &times; ${slot.rep_range} reps · RPE <span class="num">${slot.target_rpe}</span> · rest <span class="num">${slot.rest_seconds}</span>s`;
     card.appendChild(prescription);
 
+    if (pick.substituted || pick.caution.length) {
+      const limitNote = document.createElement("p");
+      limitNote.className = "slot-caution";
+      limitNote.textContent = pick.caution.length
+        ? Rana.plan.cautionText(pick.caution)
+        : Rana.plan.swapText(pick, data);
+      card.appendChild(limitNote);
+    }
+
     if (options.length > 1) {
       const altNote = document.createElement("p");
       altNote.className = "slot-prescription";
@@ -75,14 +88,24 @@ async function main() {
   const beginBtn = document.getElementById("begin-btn");
   const isToday = dateStr === Rana.plan.todayStr();
   const note = document.getElementById("session-note");
+  const inProgress = Rana.storage.getInProgressSession();
+  const thisIsInProgress = inProgress && inProgress.type === "planned" && inProgress.date === dateStr;
 
   if (isToday && session.status !== "completed") {
-    beginBtn.hidden = false;
-    beginBtn.addEventListener("click", () => {
-      window.location.href = `active-session.html?date=${dateStr}`;
-    });
+    if (inProgress && !thisIsInProgress) {
+      // Only one workout can be in progress at a time.
+      note.textContent = "You have another workout in progress. Finish or discard it from the dashboard first.";
+    } else {
+      beginBtn.hidden = false;
+      beginBtn.textContent = thisIsInProgress ? "Resume session" : "Begin session";
+      beginBtn.addEventListener("click", () => {
+        window.location.href = `active-session.html?date=${dateStr}`;
+      });
+    }
   } else if (session.status === "completed") {
     note.textContent = "Already logged.";
+  } else if (session.status === "off-plan") {
+    note.textContent = "You trained something else this day. Following the plan is optional.";
   } else if (session.status === "missed") {
     note.textContent = "This session was missed — it stays on the schedule, not rescheduled.";
   } else {
