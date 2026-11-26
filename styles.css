@@ -350,28 +350,264 @@ fieldset label input[type="checkbox"] {
   margin: 4px 0 20px;
 }
 
-.stat-compare {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 8px;
-  margin-bottom: 4px;
-  font-size: 0.75rem;
-  color: var(--text-dim);
+/* ---- Results: the 12-week route ----
+   Phase colors: calibration = cyan outline (still finding weights),
+   build = solid blue (the work), deload = green (recovery — the same green
+   the dashboard's Recovery meter uses). Tier markers use each tier's own
+   glow color from the [data-tier] rules further down. */
+
+.route {
+  margin-bottom: 20px;
+}
+
+.route-headline {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.route-headline-prefix {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.stat-compare-arrow {
-  text-align: center;
-}
-
-.plan-assignment {
-  text-align: center;
-}
-
-.plan-assignment-days {
   color: var(--text-dim);
-  font-size: 0.9rem;
+}
+
+.route-headline-tier {
+  margin-left: 8px;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  color: var(--tier-color, var(--system-cyan));
+  text-shadow: 0 0 14px var(--tier-glow, transparent);
+}
+
+.route-sub {
+  margin: 4px 0 18px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* One column per week; rows: markers / phase cells / week numbers. */
+.route-track {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks, 12), 1fr);
+  grid-template-rows: 18px 14px auto;
+  column-gap: 3px;
+  row-gap: 6px;
+  margin-bottom: 16px;
+}
+
+.route-marker-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A diamond (a rotated square) in the tier's color, glowing. */
+.route-node {
+  width: 11px;
+  height: 11px;
+  transform: rotate(45deg);
+  background-color: var(--tier-color, var(--system-cyan));
+  box-shadow: 0 0 10px var(--tier-glow, rgba(63, 233, 255, 0.5));
+}
+
+.route-cell {
+  background-color: var(--system-blue);
+}
+.route-cell[data-phase="calibration"] {
+  background-color: rgba(63, 233, 255, 0.12);
+  box-shadow: inset 0 0 0 1px var(--system-cyan);
+}
+.route-cell[data-phase="deload"] {
+  background-color: var(--vitality);
+}
+
+.route-week-num {
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.route-milestones,
+.route-phases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.route-milestones {
+  margin-bottom: 16px;
+  border-top: 1px solid rgba(63, 233, 255, 0.12);
+}
+
+.route-milestones li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(63, 233, 255, 0.12);
+  font-size: 0.85rem;
+}
+
+.route-ms-week {
+  color: var(--text-dim);
+}
+
+.route-ms-tier {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  color: var(--tier-color, var(--system-cyan));
+}
+
+.route-ms-level {
+  font-family: var(--font-display);
+  color: var(--text);
+}
+
+.route-phases li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.route-phase-swatch {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  background-color: var(--system-blue);
+}
+.route-phases li[data-phase="calibration"] .route-phase-swatch {
+  background-color: rgba(63, 233, 255, 0.12);
+  box-shadow: inset 0 0 0 1px var(--system-cyan);
+}
+.route-phases li[data-phase="deload"] .route-phase-swatch {
+  background-color: var(--vitality);
+}
+
+.route-phase-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.route-phase-text {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* Reveal: when the route section appears, the week cells fill in left to
+   right and the tier markers light up one after another. Off for reduced
+   motion (the whole section then just appears, like every other step). */
+.reveal-step.shown .route-cell {
+  animation: route-fill 0.25s ease-out both;
+  animation-delay: calc(var(--i) * 45ms);
+}
+.reveal-step.shown .route-node {
+  animation: route-node-on 0.4s ease-out both;
+  animation-delay: calc(0.6s + var(--i) * 0.25s);
+}
+
+@keyframes route-fill {
+  from { opacity: 0; transform: scaleY(0.3); }
+  to   { opacity: 1; transform: scaleY(1); }
+}
+@keyframes route-node-on {
+  from { opacity: 0; transform: rotate(45deg) scale(0.2); }
+  to   { opacity: 1; transform: rotate(45deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-step.shown .route-cell,
+  .reveal-step.shown .route-node {
+    animation: none;
+  }
+}
+
+/* ---- Results: the split (the screen's headline panel) ----
+   Brighter cyan border and glow than a normal panel so it reads as the
+   main thing on the page; the split name is the largest text after the
+   screen title. */
+
+.plan-hero {
+  margin-bottom: 20px;
+  border-color: var(--system-cyan);
+  box-shadow: 0 0 28px rgba(63, 233, 255, 0.18);
+}
+
+.plan-hero-name {
+  margin: 6px 0 4px;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  color: var(--system-cyan);
+  text-shadow: 0 0 16px rgba(63, 233, 255, 0.35);
+}
+
+.plan-hero-meta {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* The week: one row per day, Monday first. */
+.plan-hero-week {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  border-top: 1px solid rgba(63, 233, 255, 0.12);
+}
+
+.plan-hero-day {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0 8px 10px;
+  border-bottom: 1px solid rgba(63, 233, 255, 0.12);
+  border-left: 2px solid var(--system-cyan);
+}
+
+.plan-hero-dow {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--system-cyan);
+}
+
+.plan-hero-workout {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+}
+
+.plan-hero-focus {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* Rest days: still listed (never a blank), but quieter. */
+.plan-hero-day--rest {
+  border-left-color: transparent;
+}
+.plan-hero-day--rest .plan-hero-dow,
+.plan-hero-day--rest .plan-hero-workout {
+  color: var(--text-dim);
+}
+
+.plan-hero-why {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
 }
 
 .nutrition-projection {

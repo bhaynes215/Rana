@@ -321,6 +321,63 @@ Rana.game = (() => {
     return points;
   }
 
+  // ---------------------------------------------------------------------
+  // 12-week route (the analysis screen's forecast)
+  // ---------------------------------------------------------------------
+  // Walks through the plan week by week, assuming every scheduled session
+  // is completed, and reports:
+  //   - the phase of each week (calibration → build, with the split's own
+  //     deload weeks), and
+  //   - which tiers get reached, and in which week.
+  //
+  // Honesty note: this counts CONSISTENCY XP ONLY (session XP + streak
+  // boost), which is guaranteed if you show up. Strength-increase XP is
+  // left out on purpose because the app can't know how fast you'll get
+  // stronger — so the levels shown are a floor ("at least"), never an
+  // inflated promise. The screen labels them that way.
+  function forecastRoute(trainingDaysPerWeek, deloadEveryWeeks, weeks = 12) {
+    const perWeek = Number(trainingDaysPerWeek) || 3;
+    const deloadEvery = Number(deloadEveryWeeks) || 0;
+
+    let xp = 0;
+    let streak = 0;
+    let lastTier = tierForLevel(1);
+    const milestones = [{ week: 1, tier: lastTier, level: 1 }];
+    const weekList = [];
+
+    for (let w = 1; w <= weeks; w++) {
+      for (let s = 0; s < perWeek; s++) {
+        streak += 1;
+        const boosted = Math.min(streak, XP_RULES.STREAK_MAX_SESSIONS);
+        xp += Math.round(XP_RULES.SESSION_XP * (1 + boosted * XP_RULES.STREAK_STEP));
+      }
+      const level = levelForXp(xp);
+      const tier = tierForLevel(level);
+      if (tier !== lastTier) {
+        milestones.push({ week: w, tier, level: TIERS.find((t) => t.name === tier).minLevel });
+        lastTier = tier;
+      }
+
+      // Calibration = the first weeks, while each exercise is still being
+      // logged for its first CALIBRATION_SESSIONS times (each workout day
+      // repeats weekly, so that's the first 3 weeks). A deload week from
+      // the split's own programming takes priority over everything else.
+      let phase = "build";
+      if (w <= XP_RULES.CALIBRATION_SESSIONS) phase = "calibration";
+      if (deloadEvery && w % deloadEvery === 0) phase = "deload";
+
+      weekList.push({ week: w, phase, xp, level, tier });
+    }
+
+    return {
+      weeks: weekList,
+      milestones,
+      sessions: perWeek * weeks,
+      finalLevel: weekList[weekList.length - 1].level,
+      finalTier: weekList[weekList.length - 1].tier,
+    };
+  }
+
   // Projected stats after 12 weeks of following the assigned plan, starting
   // from 0. Estimates points from training_days_per_week × 12 weeks of
   // "average" sessions. A forecast conditional on showing up — the UI must
@@ -431,6 +488,7 @@ Rana.game = (() => {
     statValue,
     computeStatPoints,
     computeProjectedStats,
+    forecastRoute,
     computeCalorieTargets,
     computeRecovery,
   };

@@ -18,36 +18,53 @@
     <p class="system-label reveal-step" data-step="0">[ SYSTEM ]</p>
     <h1 class="system-heading reveal-step" data-step="0">ANALYSIS COMPLETE</h1>
 
-    <div class="quote-panel reveal-step" data-step="1">
+    <!-- The split is the headline of this screen: its name, the shape of
+         the week, and each training day laid out on its real weekday.
+         Filled in by results.js. -->
+    <section class="panel plan-hero reveal-step" data-step="1" aria-labelledby="plan-hero-name">
+      <p class="today-eyebrow">Your split</p>
+      <h2 id="plan-hero-name" class="plan-hero-name"></h2>
+      <p id="plan-hero-meta" class="plan-hero-meta"></p>
+      <ol id="plan-hero-week" class="plan-hero-week"></ol>
+      <p id="plan-hero-why" class="plan-hero-why"></p>
+    </section>
+
+    <!-- Your 12-week route: tier milestones on top, training phases
+         underneath, both on the same 12-week grid so they line up.
+         Built by results.js from Rana.game.forecastRoute(). -->
+    <section class="panel route reveal-step" data-step="2" aria-labelledby="route-heading">
+      <p class="today-eyebrow" id="route-heading">Your 12-week route</p>
+      <p class="route-headline">
+        <span class="route-headline-prefix">At least</span>
+        <span id="route-final-level" class="num"></span>
+        <span id="route-final-tier" class="route-headline-tier"></span>
+      </p>
+      <p id="route-sub" class="route-sub"></p>
+
+      <!-- The track: row 1 = milestone markers, row 2 = one cell per week
+           colored by phase, row 3 = week numbers. -->
+      <div id="route-track" class="route-track" aria-hidden="true"></div>
+
+      <ol id="route-milestones" class="route-milestones"></ol>
+      <ol id="route-phases" class="route-phases"></ol>
+    </section>
+
+    <div class="quote-panel reveal-step" data-step="3">
       <span id="quote-text"></span>
       <span id="quote-attribution" class="quote-attribution"></span>
     </div>
 
-    <div class="reveal-step" data-step="2">
-      <div class="stat-compare">
-        <span>Every stat starts at 0</span>
-        <span class="stat-compare-arrow">&rarr;</span>
-        <span>12 weeks of this plan</span>
-      </div>
-      <div id="stat-blocks"></div>
-    </div>
-
-    <div class="panel plan-assignment reveal-step" data-step="3">
-      <p id="plan-assignment-name" class="today-eyebrow"></p>
-      <p id="plan-assignment-days" class="plan-assignment-days"></p>
-    </div>
-
-    <div class="nutrition-projection reveal-step" data-step="3">
+    <div class="nutrition-projection reveal-step" data-step="4">
       <p>Daily intake target <span id="nutrition-calories" class="num"></span> kcal</p>
       <p id="nutrition-macros"></p>
       <p>Water <span class="num">10</span> cups</p>
     </div>
 
-    <p class="intro reveal-step" data-step="3" style="font-size: 0.8rem;">
+    <p class="intro reveal-step" data-step="4" style="font-size: 0.8rem;">
       Projections assume full adherence to the plan and aren't medical advice — check with a doctor before starting a new training or nutrition program, especially with any existing condition.
     </p>
 
-    <button id="lock-in-btn" type="button" class="btn-continue reveal-step" data-step="4">
+    <button id="lock-in-btn" type="button" class="btn-continue reveal-step" data-step="5">
       ARE YOU READY TO LOCK IN?
     </button>
   </main>
