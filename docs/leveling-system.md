@@ -58,6 +58,9 @@ The plan is a suggestion. The streak boost is the reward for following it; train
 - **INT** only grows from suggested workouts done as prescribed ("following the plan").
 - A freestyle workout shows on the week strip as **off-plan** (not missed) when it replaces a suggested workout.
 
+## Fixing mistakes (added 2026-11-25)
+Any finished workout can be edited from its summary (sets' weight/reps changed or removed) or deleted entirely. Because XP, levels and stats are always recalculated from the saved sets, a correction flows through everything: fixing a 1000 lb typo removes the fake "best" it created, and can lower a level the typo inflated. "Levels never go down" means never from training or resting, not from correcting your own data entry.
+
 ## The summary screen
 Shown after every finished workout (`session-complete`):
 1. **Recap:** workout name, kind and date, duration, exercises and sets; every exercise lists its sets, with a ★ on the set that earned a strength increase.
