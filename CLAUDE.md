@@ -105,11 +105,12 @@ _Superseded below — kept for history:_
 ### Next pass
 The PRD's build order (§3) — library repair through account creation restyle — is done as a first pass (see "Current status" above). What's actually next:
 0. **⏰ Reminder — per-exercise history (agreed follow-up, 2026-11-25):** tap an exercise and see every session it was done, its sets over time, the all-time best and a progress trend. Deliberately deferred while the workout history was built; the user asked to be reminded.
-1. **Fitness-expert review pass** — work through "Needs your review before this is trustworthy" above, especially the 43 new library entries, the invented projection/calorie formulas, and the leveling placeholder numbers.
-2. **Resolve the remaining 3 PRD open questions** (§13.1 under-18, §13.3 calibration/INT, §13.4 session length) — see "Open questions" below.
-3. **Expand session detail/active session beyond "today only"** if browsing/logging other dates turns out to matter for real use.
-4. Deploy (free hosting) — still not done, no live URL yet.
-5. Migrate storage off `localStorage` to a real database (Supabase, per the PRD) once the data model has been used for real and any schema gaps show up.
+1. **Splits and workout-assignment design session (planned by you, 2026-11-26).** The current splits, caps and assignment logic are a first-pass shell; you'll design the real logic in a dedicated session. Until then, treat these as placeholders: the workbook's split content, the 3-set / 6-exercise caps and "drop the last accessory" rule (`scripts/library_rules.py`, which removed core from 5 of 7 splits), the split matcher in `plan.js`, focus area being advisory-only, deloads that are shown but not prescribed, and the draft limitation tags.
+2. **Fitness-expert review pass** — work through "Needs your review before this is trustworthy" above, especially the 43 new library entries, the invented projection/calorie formulas, and the leveling placeholder numbers.
+3. **Resolve the remaining 3 PRD open questions** (§13.1 under-18, §13.3 calibration/INT, §13.4 session length) — see "Open questions" below.
+4. **Expand session detail/active session beyond "today only"** if browsing/logging other dates turns out to matter for real use.
+5. Deploy (free hosting) — still not done, no live URL yet.
+6. Migrate storage off `localStorage` to a real database (Supabase, per the PRD) once the data model has been used for real and any schema gaps show up.
 
 ## Locked design decisions
 These were deliberate calls made while building the onboarding → account creation → dashboard flow — don't revisit them without a reason.
