@@ -27,7 +27,7 @@
     {
       "slot_id": 1003,
       "workout_id": "PPL_PUSH_A",
-      "slot_order": 3,
+      "slot_order": 4,
       "movement_pattern": "Shoulder Abduction",
       "working_sets": 3,
       "rep_range": "12-15",
@@ -39,14 +39,14 @@
     {
       "slot_id": 1004,
       "workout_id": "PPL_PUSH_A",
-      "slot_order": 4,
-      "movement_pattern": "Elbow Extension",
+      "slot_order": 3,
+      "movement_pattern": "Horizontal Adduction",
       "working_sets": 3,
       "rep_range": "12-15",
-      "target_rpe": 9.5,
+      "target_rpe": 9,
       "rest_seconds": 60,
-      "tempo": "2-0-1-1",
-      "coaching_cue": "Upper arm vertical and still; separate the rope at lockout."
+      "tempo": "2-1-1-1",
+      "coaching_cue": "Soft elbow held constant \u2014 the movement happens at the shoulder, not the elbow."
     },
     {
       "slot_id": 1005,
@@ -436,13 +436,13 @@
       "slot_id": 1045,
       "workout_id": "ARNOLD_CHEST_BACK",
       "slot_order": 6,
-      "movement_pattern": "Horizontal Adduction",
+      "movement_pattern": "Shoulder Extension",
       "working_sets": 3,
       "rep_range": "12-15",
       "target_rpe": 9,
       "rest_seconds": 60,
-      "tempo": "2-1-1-1",
-      "coaching_cue": "Drive upper arm toward the midline; pause one second in the stretched position."
+      "tempo": "2-0-1-1",
+      "coaching_cue": "Hinge slightly and keep the elbows locked \u2014 push the bar down and back toward the hips."
     },
     {
       "slot_id": 1047,
@@ -1551,7 +1551,7 @@
     {
       "slot_id": 1189,
       "workout_id": "AES_SHOULDERS_BACK",
-      "slot_order": 3,
+      "slot_order": 4,
       "movement_pattern": "Shoulder Abduction",
       "working_sets": 3,
       "rep_range": "12-20",
@@ -1563,7 +1563,7 @@
     {
       "slot_id": 1190,
       "workout_id": "AES_SHOULDERS_BACK",
-      "slot_order": 4,
+      "slot_order": 5,
       "movement_pattern": "Horizontal Abduction",
       "working_sets": 3,
       "rep_range": "15-20",
@@ -1575,14 +1575,14 @@
     {
       "slot_id": 1191,
       "workout_id": "AES_SHOULDERS_BACK",
-      "slot_order": 5,
-      "movement_pattern": "Horizontal Abduction",
+      "slot_order": 3,
+      "movement_pattern": "Vertical Pull",
       "working_sets": 3,
-      "rep_range": "15-20",
-      "target_rpe": 9,
-      "rest_seconds": 60,
-      "tempo": "2-0-1-1",
-      "coaching_cue": "Pull to the forehead and externally rotate so the thumbs finish pointing behind you."
+      "rep_range": "10-12",
+      "target_rpe": 8.5,
+      "rest_seconds": 90,
+      "tempo": "3-0-1-0",
+      "coaching_cue": "Unilateral work exposes side-to-side gaps \u2014 match the weak side's reps on both sides."
     },
     {
       "slot_id": 1192,
@@ -1777,17 +1777,17 @@
     },
     {
       "slot_id": 1004,
-      "exercise_key": "rope_pushdown",
+      "exercise_key": "cable_fly",
       "option_rank": 1
     },
     {
       "slot_id": 1004,
-      "exercise_key": "straight_bar_pushdown",
+      "exercise_key": "pec_deck",
       "option_rank": 2
     },
     {
       "slot_id": 1004,
-      "exercise_key": "bench_dip",
+      "exercise_key": "db_fly",
       "option_rank": 3
     },
     {
@@ -2272,17 +2272,17 @@
     },
     {
       "slot_id": 1045,
-      "exercise_key": "pec_deck",
+      "exercise_key": "straight_arm_pd",
       "option_rank": 1
     },
     {
       "slot_id": 1045,
-      "exercise_key": "cable_fly",
+      "exercise_key": "machine_pullover",
       "option_rank": 2
     },
     {
       "slot_id": 1045,
-      "exercise_key": "db_fly",
+      "exercise_key": "sa_lat_pd",
       "option_rank": 3
     },
     {
@@ -3692,17 +3692,17 @@
     },
     {
       "slot_id": 1191,
-      "exercise_key": "face_pull",
+      "exercise_key": "sa_lat_pd",
       "option_rank": 1
     },
     {
       "slot_id": 1191,
-      "exercise_key": "reverse_pec_deck",
+      "exercise_key": "lat_pulldown",
       "option_rank": 2
     },
     {
       "slot_id": 1191,
-      "exercise_key": "band_pull_apart",
+      "exercise_key": "sa_db_row",
       "option_rank": 3
     },
     {

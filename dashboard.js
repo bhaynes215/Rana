@@ -78,8 +78,12 @@ async function main() {
     resumeBtn.addEventListener("click", () => {
       window.location.href = `active-session.html?session=${ip.sessionId}`;
     });
-    document.getElementById("discard-btn").addEventListener("click", () => {
-      if (window.confirm(`Discard "${ip.title}"? Its sets are deleted and earn no XP. This can't be undone.`)) {
+    document.getElementById("discard-btn").addEventListener("click", async () => {
+      const sure = await Rana.ui.confirm({
+        message: `Discard "${ip.title}"? Its sets are deleted and earn no XP. This can't be undone.`,
+        confirmLabel: "Discard",
+      });
+      if (sure) {
         Rana.storage.discardSession(ip.sessionId);
         window.location.reload();
       }

@@ -442,8 +442,12 @@ async function main() {
   }
 
   // --- Discard: deletes the workout and its sets, no XP ---
-  document.getElementById("discard-btn").addEventListener("click", () => {
-    if (window.confirm("Discard this workout? Its sets are deleted and earn no XP. This can't be undone.")) {
+  document.getElementById("discard-btn").addEventListener("click", async () => {
+    const sure = await Rana.ui.confirm({
+      message: "Discard this workout? Its sets are deleted and earn no XP. This can't be undone.",
+      confirmLabel: "Discard",
+    });
+    if (sure) {
       Rana.storage.discardSession(session.session_id);
       window.location.href = "dashboard.html";
     }
@@ -451,7 +455,7 @@ async function main() {
 
   // --- Finish ---
   const finishNote = document.getElementById("finish-note");
-  document.getElementById("finish-btn").addEventListener("click", () => {
+  document.getElementById("finish-btn").addEventListener("click", async () => {
     finishNote.textContent = "";
     const sets = Rana.storage.getSetsForSession(session.session_id);
 
@@ -463,7 +467,7 @@ async function main() {
     if (isFreestyle) {
       const min = Rana.game.XP_RULES.FREESTYLE_MIN_SETS;
       if (sets.length < min &&
-          !window.confirm(`Log at least ${min} sets to earn session XP. Finish anyway?`)) return;
+          !(await Rana.ui.confirm({ message: `Log at least ${min} sets to earn session XP. Finish anyway?`, confirmLabel: "Finish anyway" }))) return;
     } else {
       // Following the plan means at least half the prescribed sets.
       const slots = data.slotsByWorkout.get(session.workout_id) || [];
@@ -471,7 +475,7 @@ async function main() {
       const credited = slots.reduce(
         (sum, slot) => sum + Math.min(sets.filter((s) => s.slot_id === slot.slot_id).length, slot.working_sets), 0);
       if (credited / prescribed < Rana.game.XP_RULES.COMPLETION_THRESHOLD &&
-          !window.confirm("That's under half of the suggested workout, so it won't count as following the plan. Finish anyway?")) return;
+          !(await Rana.ui.confirm({ message: "That's under half of the suggested workout, so it won't count as following the plan. Finish anyway?", confirmLabel: "Finish anyway" }))) return;
     }
 
     const panel = document.getElementById("difficulty-panel");

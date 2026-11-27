@@ -4,6 +4,7 @@
 //   Rana.ui.numericField(input, { decimal })   a number-only text box
 //   Rana.ui.prescription(slot, { showRest })    the "3 sets × 8-10 reps · RPE 8 (i)" line
 //   Rana.ui.infoButton(key)                     a small (i) button that opens an explanation
+//   Rana.ui.confirm({ message, confirmLabel })  an in-page "are you sure?"; resolves true or false
 
 window.Rana = window.Rana || {};
 
@@ -236,5 +237,60 @@ Rana.ui = (() => {
     return line;
   }
 
-  return { numericField, prescription, infoButton };
+  // ---------------------------------------------------------------------
+  // In-page confirmation (replaces window.confirm)
+  // ---------------------------------------------------------------------
+  // The browser's own confirm() popup is blocked in some places (the Claude
+  // app's built-in browser, embedded views, some mobile browsers). It just
+  // returns false, so a button that relied on it silently does nothing.
+  // This draws the question inside the page instead, so it always works.
+  //
+  //   if (await Rana.ui.confirm({ message: "Delete it?", confirmLabel: "Delete" })) { ... }
+  //
+  // Resolves true on the confirm button, false on Cancel, Escape, or a tap
+  // outside the box. Cancel is focused first, so Enter never destroys data.
+  function confirm({ message, confirmLabel = "Yes", cancelLabel = "Cancel" }) {
+    return new Promise((resolve) => {
+      const backdrop = element("div", "modal-backdrop");
+      const box = element("div", "panel panel--raised confirm-modal");
+      box.setAttribute("role", "alertdialog");
+      box.setAttribute("aria-modal", "true");
+      box.setAttribute("aria-label", message);
+
+      const text = element("p", "confirm-modal-text", message);
+      const actions = element("div", "confirm-modal-actions");
+      const cancelBtn = element("button", "btn-secondary", cancelLabel);
+      cancelBtn.type = "button";
+      const okBtn = element("button", "btn-continue", confirmLabel);
+      okBtn.type = "button";
+      actions.append(cancelBtn, okBtn);
+      box.append(text, actions);
+      backdrop.appendChild(box);
+
+      const previousFocus = document.activeElement;
+      function close(answer) {
+        document.removeEventListener("keydown", onKey, true);
+        backdrop.remove();
+        if (previousFocus && previousFocus.focus) previousFocus.focus();
+        resolve(answer);
+      }
+      function onKey(event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close(false);
+        }
+      }
+      cancelBtn.addEventListener("click", () => close(false));
+      okBtn.addEventListener("click", () => close(true));
+      backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) close(false);
+      });
+      document.addEventListener("keydown", onKey, true);
+
+      document.body.appendChild(backdrop);
+      cancelBtn.focus();
+    });
+  }
+
+  return { numericField, prescription, infoButton, confirm };
 })();

@@ -1771,6 +1771,22 @@ fieldset label input[type="checkbox"] {
   color: var(--vitality);
 }
 
+/* ---- In-page confirmation (Rana.ui.confirm) ---- */
+.confirm-modal {
+  width: 100%;
+  max-width: 360px;
+}
+.confirm-modal-text {
+  margin: 0 0 var(--space-4);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.confirm-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
 /* ---- "Name your workout" prompt ---- */
 .name-modal {
   width: 100%;

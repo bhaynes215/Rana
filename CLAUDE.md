@@ -8,6 +8,9 @@ A web app (not native mobile) that gives college students a structured workout p
 ## Current status
 _Last updated: 2026-11-26 (new split lookup, Upper C/Lower C and PPL + Arnold, Recommended days, optional abs, saved-plan repair)_
 
+**2026-11-27: Discard (and every other "are you sure?") now works everywhere**
+- The Discard button on the logging screen did nothing in the Claude app's built-in browser, because the browser's own `confirm()` popup is blocked there and just answers "no". All six popups (discard on the dashboard and logging screen, finishing under half the sets or under 3 freestyle sets, deleting a workout, removing every set while editing) now use **`Rana.ui.confirm`** (`ui.js`): a box drawn inside the page with Cancel and a named action button. Cancel is focused first, and Escape or a tap outside cancels. **Don't use `window.confirm`/`alert`/`prompt` in this app.**
+
 **2026-11-26 (night): How splits are assigned, rebuilt**
 - **Goal first, then days** (`SPLIT_FOR` in `plan.js`, a plain table): build muscle / lose fat → 3 days PPL (Push A, Pull A, Legs A), 4 Aesthetics, 5 Hybrid, 6 **PPL + Arnold**; get stronger → **Upper/Lower** at every day count; general fitness → 3 days Full Body, 4–6 Upper/Lower. The old points-based scoring is gone. Someone training N days gets a split's **first N days**.
 - **Upper/Lower now covers 3–6 days** with two new days you can edit in the workbook: **Upper C** (Barbell Bench, Barbell Row, Cable Lateral Raise, Reverse Pec Deck, DB Hammer Curl, EZ-Bar Skullcrusher) and **Lower C** (Conventional Deadlift, Machine Hack Squat, Seated Leg Curl, Leg Extension, Standing Calf Raise). 3 days = Upper A, Lower A, Upper B; 4 adds Lower B; 5 adds Upper C; 6 adds Lower C. Renamed "Upper / Lower (3-6 Day)".

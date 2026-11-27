@@ -243,7 +243,7 @@ function setupEditing(session, sets, data) {
   editBtn.addEventListener("click", openEditor);
   document.getElementById("editor-cancel").addEventListener("click", closeEditor);
 
-  document.getElementById("editor-save").addEventListener("click", () => {
+  document.getElementById("editor-save").addEventListener("click", async () => {
     const rows = [...editor.querySelectorAll(".editor-row")];
     const changes = [];
     for (const row of rows) {
@@ -267,7 +267,11 @@ function setupEditing(session, sets, data) {
     const remaining = rows.length - changes.filter((c) => c.remove).length;
     if (remaining === 0) {
       // Removing every set is the same as deleting the workout.
-      if (!window.confirm("That removes every set, which deletes this workout and the XP it earned. Continue?")) return;
+      const sure = await Rana.ui.confirm({
+        message: "That removes every set, which deletes this workout and the XP it earned. Continue?",
+        confirmLabel: "Delete workout",
+      });
+      if (!sure) return;
       Rana.storage.discardSession(session.session_id);
       window.location.href = "history.html";
       return;
@@ -280,8 +284,12 @@ function setupEditing(session, sets, data) {
     window.location.href = backToHistory;
   });
 
-  document.getElementById("delete-workout").addEventListener("click", () => {
-    if (!window.confirm(`Delete "${Rana.plan.sessionTitle(session, data)}"? Its sets and the XP it earned are removed. This can't be undone.`)) return;
+  document.getElementById("delete-workout").addEventListener("click", async () => {
+    const sure = await Rana.ui.confirm({
+      message: `Delete "${Rana.plan.sessionTitle(session, data)}"? Its sets and the XP it earned are removed. This can't be undone.`,
+      confirmLabel: "Delete",
+    });
+    if (!sure) return;
     Rana.storage.discardSession(session.session_id);
     window.location.href = "history.html";
   });
