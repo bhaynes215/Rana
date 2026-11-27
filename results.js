@@ -138,7 +138,15 @@ function buildRoute(route) {
 // all seven days, Monday first, each training day with its workout and
 // focus on the weekday it will always fall on (fixed weekly schedule), and
 // rest days marked as rest rather than left blank.
-function buildPlanHero(split, plan, data) {
+// The user's own fitness level, shown on the summary line. (The split's
+// "experience_level" from the workbook no longer decides who gets it.)
+const FITNESS_LEVEL_LABEL = {
+  "never-trained": "New to training",
+  "returning": "Returning",
+  "consistently": "Training consistently",
+};
+
+function buildPlanHero(split, plan, data, profile) {
   // "Upper / Lower (4-Day)" → "Upper / Lower". The parenthetical either
   // repeats the day count or lists the days, both of which the week list
   // below already shows.
@@ -147,7 +155,7 @@ function buildPlanHero(split, plan, data) {
   const trainingDays = Rana.plan.WEEKDAY_ORDER.filter((d) => plan.weekday_map[d]);
   document.getElementById("plan-hero-meta").textContent =
     `${trainingDays.length} days / week · ~${split.est_session_minutes} min sessions · ` +
-    `${split.primary_goal} · ${split.experience_level}`;
+    `${split.primary_goal} · ${FITNESS_LEVEL_LABEL[profile.fitness_level] || ""}`;
 
   const weekEl = document.getElementById("plan-hero-week");
   weekEl.innerHTML = "";
@@ -215,16 +223,18 @@ document.getElementById("results-screen").addEventListener("click", (event) => {
 // --- Main ---
 async function main() {
   const profile = Rana.storage.getProfile();
-  const plan = Rana.storage.getPlan();
+  let plan = Rana.storage.getPlan();
   if (!profile || !plan) {
     window.location.href = "onboarding.html";
     return;
   }
 
   const data = await Rana.data.load();
+  // Re-read: loading the data may have repaired a plan whose split was removed.
+  plan = Rana.storage.getPlan();
   const split = data.splitById.get(plan.split_id);
 
-  buildPlanHero(split, plan, data);
+  buildPlanHero(split, plan, data, profile);
 
   // Sessions per week = weekdays that actually have a workout assigned
   // (if someone picks more days than the split has, the extras are rest).

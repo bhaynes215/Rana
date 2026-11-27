@@ -84,8 +84,10 @@ Rana.dashboard = (() => {
     return parts.join(" ") || null;
   }
 
-  async function computeRealState(profile, plan) {
+  async function computeRealState(profile, savedPlan) {
     const data = await Rana.data.load();
+    // Re-read: loading the data may have repaired a plan whose split was removed.
+    const plan = Rana.storage.getPlan() || savedPlan;
 
     // Only FINISHED workouts count toward XP, stats and recovery.
     const finishedSessions = Rana.storage.getFinishedSessions();

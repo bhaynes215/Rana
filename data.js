@@ -36,13 +36,12 @@ Rana.data = (() => {
     const splitById = new Map(splits.map((s) => [s.split_id, s]));
     const workoutById = new Map(workouts.map((w) => [w.workout_id, w]));
 
-    const workoutsBySplit = new Map();
-    workouts.forEach((w) => {
-      const list = workoutsBySplit.get(w.split_id) || [];
-      list.push(w);
-      workoutsBySplit.set(w.split_id, list);
-    });
-    workoutsBySplit.forEach((list) => list.sort((a, b) => a.day_order - b.day_order));
+    // Each split lists its days in order (`workout_ids`, built by
+    // scripts/build_library.py). A split can reuse another split's days, e.g.
+    // the 6-day PPL + Arnold split is the PPL A days followed by the Arnold days.
+    const workoutsBySplit = new Map(
+      splits.map((s) => [s.split_id, (s.workout_ids || []).map((id) => workoutById.get(id)).filter(Boolean)])
+    );
 
     const slotsByWorkout = new Map();
     slotsDoc.slots.forEach((s) => {
@@ -74,6 +73,9 @@ Rana.data = (() => {
       optionsBySlot,
       limitationsByExercise,
     };
+    // The saved plan may point at a split that was since removed from the
+    // workbook; fix it before any screen reads it (see Rana.plan.repairPlan).
+    if (Rana.plan && Rana.storage) Rana.plan.repairPlan(cache);
     return cache;
   }
 

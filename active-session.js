@@ -281,8 +281,74 @@ function buildFreestyleCard(exerciseKey) {
   return card;
 }
 
+// Called whenever exercises are added or removed. Freestyle: show the
+// "add your first exercise" note when empty. Suggested workout: update the
+// abs chooser so added exercises show as picked.
 function refreshFreestyleEmptyState() {
-  document.getElementById("empty-note").hidden = session.exercises.length > 0;
+  if (session.type === "freestyle") {
+    document.getElementById("empty-note").hidden = session.exercises.length > 0;
+  } else if (refreshAbsChooser) {
+    refreshAbsChooser();
+  }
+}
+
+// ---------------------------------------------------------------------
+// Suggested workout: the optional abs section at the end
+// ---------------------------------------------------------------------
+// Every core exercise is offered (minus any the workout already uses). Tap
+// one to add it; it then logs exactly like a freestyle exercise: any number
+// of sets, removable until a set is logged. Its sets have no slot, so they
+// earn strength XP but never count toward finishing the suggested workout.
+let refreshAbsChooser = null;
+
+function buildAbsSection(slots) {
+  const options = Rana.plan.absOptions(data, slots);
+  const section = document.createElement("div");
+  section.className = "abs-section";
+  if (!options.length) return section;
+
+  const panel = document.createElement("div");
+  panel.className = "panel slot-card abs-panel";
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "slot-pattern";
+  eyebrow.textContent = "Abs · Optional, recommended";
+  const hint = document.createElement("p");
+  hint.className = "slot-prescription";
+  hint.textContent = `${Rana.plan.ABS_HINT}. Tap any to add it.`;
+  const chooser = document.createElement("div");
+  chooser.className = "slot-swap";
+  panel.append(eyebrow, hint, chooser);
+
+  const added = document.createElement("div");
+  added.className = "abs-added";
+  section.append(panel, added);
+
+  options.forEach((ex) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "slot-swap-option";
+    btn.textContent = ex.exercise_name;
+    btn.dataset.exerciseKey = ex.exercise_key;
+    btn.addEventListener("click", () => {
+      if (session.exercises.includes(ex.exercise_key)) return; // already added: use its Remove button
+      session = Rana.storage.updateSession(session.session_id, {
+        exercises: [...session.exercises, ex.exercise_key],
+      });
+      added.appendChild(buildFreestyleCard(ex.exercise_key));
+      refreshAbsChooser();
+    });
+    chooser.appendChild(btn);
+  });
+
+  refreshAbsChooser = () => {
+    chooser.querySelectorAll(".slot-swap-option").forEach((b) => {
+      b.setAttribute("aria-pressed", String(session.exercises.includes(b.dataset.exerciseKey)));
+    });
+  };
+
+  session.exercises.forEach((k) => added.appendChild(buildFreestyleCard(k)));
+  refreshAbsChooser();
+  return section;
 }
 
 function openPicker() {
@@ -341,6 +407,8 @@ async function main() {
   }
 
   data = await Rana.data.load();
+  // Re-read: loading the data may have repaired a plan whose split was removed.
+  plan = Rana.storage.getPlan();
   session = resolveSession();
   if (session === undefined) return; // redirecting to the workout already in progress
   if (!session) {
@@ -355,6 +423,7 @@ async function main() {
   window.history.replaceState(null, "", `active-session.html?session=${session.session_id}`);
 
   const isFreestyle = session.type === "freestyle";
+  if (!session.exercises) session.exercises = []; // older records
   document.getElementById("session-title").textContent = Rana.plan.sessionTitle(session, data);
   document.getElementById("session-eyebrow").textContent = isFreestyle ? "Logging · Freestyle" : "Logging · Suggested workout";
 
@@ -369,6 +438,7 @@ async function main() {
     const slots = data.slotsByWorkout.get(session.workout_id) || [];
     const picks = Rana.plan.suggestWorkout(slots, data, Rana.plan.activeLimitations(profile));
     slots.forEach((slot, i) => list.appendChild(buildSlotCard(slot, picks[i])));
+    list.appendChild(buildAbsSection(slots));
   }
 
   // --- Discard: deletes the workout and its sets, no XP ---

@@ -56,13 +56,15 @@ function buildRow(session, sets, xp, data) {
 
 async function main() {
   const profile = Rana.storage.getProfile();
-  const plan = Rana.storage.getPlan();
+  let plan = Rana.storage.getPlan();
   if (!profile || !plan || plan.status !== "active") {
     window.location.href = "dashboard.html";
     return;
   }
 
   const data = await Rana.data.load();
+  // Re-read: loading the data may have repaired a plan whose split was removed.
+  plan = Rana.storage.getPlan();
   const sessions = Rana.storage.getFinishedSessions();
   const sets = Rana.storage.getFinishedSets();
   const ledger = Rana.game.computeXpLedger(sets, sessions, plan, data);

@@ -8,9 +8,17 @@
     "recommended_schedule": "Push A - Pull A - Legs A - Push B - Pull B - Legs B - Rest",
     "description": "Organizes training by shared joint action so the triceps and delts are not re-fatigued the day after pressing. The six days are all distinct sessions: A days and B days rotate emphasis, so one rotation covers a full week at twice-weekly frequency per muscle.",
     "rotations_per_week": 1,
-    "est_session_minutes": 65,
+    "est_session_minutes": 50,
     "deload_every_weeks": 6,
-    "best_for": "Lifters with 1+ years of consistent training who can reliably get to the gym 5-6 days a week."
+    "best_for": "Lifters with 1+ years of consistent training who can reliably get to the gym 5-6 days a week.",
+    "workout_ids": [
+      "PPL_PUSH_A",
+      "PPL_PULL_A",
+      "PPL_LEGS_A",
+      "PPL_PUSH_B",
+      "PPL_PULL_B",
+      "PPL_LEGS_B"
+    ]
   },
   {
     "split_id": "SPLIT_ARNOLD",
@@ -21,35 +29,35 @@
     "recommended_schedule": "Chest+Back - Shoulders+Arms - Legs - Chest+Back - Shoulders+Arms - Legs - Rest",
     "description": "Pairs antagonist muscle groups in the same session, which allows supersetting and produces a large local pump. High per-session volume makes this the most recovery-demanding split here.",
     "rotations_per_week": 2,
-    "est_session_minutes": 65,
+    "est_session_minutes": 55,
     "deload_every_weeks": 4,
-    "best_for": "Advanced lifters with well-established work capacity and time for 80+ minute sessions."
+    "best_for": "Advanced lifters with well-established work capacity and time for 80+ minute sessions.",
+    "workout_ids": [
+      "ARNOLD_CHEST_BACK",
+      "ARNOLD_SHOULDERS_ARMS",
+      "ARNOLD_LEGS"
+    ]
   },
   {
     "split_id": "SPLIT_UL",
-    "split_name": "Upper / Lower (4-Day)",
+    "split_name": "Upper / Lower (3-6 Day)",
     "experience_level": "Beginner",
     "days_per_week": 4,
     "primary_goal": "Strength",
-    "recommended_schedule": "Upper A - Lower A - Rest - Upper B - Lower B - Rest - Rest",
+    "recommended_schedule": "3 days: Upper A - Lower A - Upper B. 4 days: adds Lower B. 5 days: adds Upper C. 6 days: adds Lower C.",
     "description": "Trains each half of the body twice weekly, with the A sessions biased toward heavy compound strength work and the B sessions toward higher-rep hypertrophy. The best evidence-supported ratio of results to time invested.",
     "rotations_per_week": 1,
-    "est_session_minutes": 50,
+    "est_session_minutes": 55,
     "deload_every_weeks": 6,
-    "best_for": "Almost everyone. The default recommendation for beginners through early-advanced lifters."
-  },
-  {
-    "split_id": "SPLIT_ANTPOST",
-    "split_name": "Anterior / Posterior Chain",
-    "experience_level": "Intermediate",
-    "days_per_week": 4,
-    "primary_goal": "Strength",
-    "recommended_schedule": "Anterior A - Posterior A - Rest - Anterior B - Posterior B - Rest - Rest",
-    "description": "Divides the body by chain rather than by push/pull: quads, chest and front delts on anterior days, hamstrings, glutes, back and rear delts on posterior days. Concentrates hinge and pull fatigue into the same sessions, which protects the lower back.",
-    "rotations_per_week": 1,
-    "est_session_minutes": 60,
-    "deload_every_weeks": 6,
-    "best_for": "Athletes and lifters who want structural balance, and anyone whose lower back gets beaten up by squatting and deadlifting in one session."
+    "best_for": "Almost everyone. The default recommendation for beginners through early-advanced lifters.",
+    "workout_ids": [
+      "UL_UPPER_A",
+      "UL_LOWER_A",
+      "UL_UPPER_B",
+      "UL_LOWER_B",
+      "UL_UPPER_C",
+      "UL_LOWER_C"
+    ]
   },
   {
     "split_id": "SPLIT_FB",
@@ -60,9 +68,14 @@
     "recommended_schedule": "Full Body A - Rest - Full Body B - Rest - Full Body C - Rest - Rest",
     "description": "Every major movement pattern in every session, at three sessions per week. Highest frequency per muscle and the most forgiving structure if a session gets missed.",
     "rotations_per_week": 1,
-    "est_session_minutes": 50,
+    "est_session_minutes": 55,
     "deload_every_weeks": 8,
-    "best_for": "Beginners, anyone returning after a layoff, and time-constrained lifters training three days a week."
+    "best_for": "Beginners, anyone returning after a layoff, and time-constrained lifters training three days a week.",
+    "workout_ids": [
+      "FB_DAY_A",
+      "FB_DAY_B",
+      "FB_DAY_C"
+    ]
   },
   {
     "split_id": "SPLIT_HYBRID",
@@ -73,9 +86,16 @@
     "recommended_schedule": "Push - Pull - Legs - Rest - Upper - Lower - Rest",
     "description": "Front-loads the week with a full push/pull/legs rotation, then adds an upper and a lower session to push each muscle group back toward twice-weekly frequency. Solves the main weakness of a 3-day PPL without demanding six training days.",
     "rotations_per_week": 1,
-    "est_session_minutes": 60,
+    "est_session_minutes": 50,
     "deload_every_weeks": 6,
-    "best_for": "Lifters who can train five days a week and want PPL's structure with better weekly frequency."
+    "best_for": "Lifters who can train five days a week and want PPL's structure with better weekly frequency.",
+    "workout_ids": [
+      "HYB_PUSH",
+      "HYB_PULL",
+      "HYB_LEGS",
+      "HYB_UPPER",
+      "HYB_LOWER"
+    ]
   },
   {
     "split_id": "SPLIT_AESTHETIC",
@@ -86,8 +106,35 @@
     "recommended_schedule": "Push - Pull - Legs - Rest - Shoulders+Back - Rest - Rest",
     "description": "A four-day rotation with a dedicated fourth day for side delts, rear delts and lat width. Deliberately biased toward the muscles that create shoulder-to-waist taper rather than toward balanced whole-body development.",
     "rotations_per_week": 1,
-    "est_session_minutes": 60,
+    "est_session_minutes": 55,
     "deload_every_weeks": 6,
-    "best_for": "Lifters training for appearance rather than performance, who already have a base of general strength."
+    "best_for": "Lifters training for appearance rather than performance, who already have a base of general strength.",
+    "workout_ids": [
+      "AES_PUSH",
+      "AES_PULL",
+      "AES_LEGS",
+      "AES_SHOULDERS_BACK"
+    ]
+  },
+  {
+    "split_id": "SPLIT_PPL_ARNOLD",
+    "split_name": "PPL + Arnold (6-Day)",
+    "experience_level": "Intermediate",
+    "days_per_week": 6,
+    "primary_goal": "Hypertrophy",
+    "recommended_schedule": "Push A - Pull A - Legs A - Chest+Back - Shoulders+Arms - Legs - Rest",
+    "description": "Runs the Push/Pull/Legs A days and the three Arnold days in one week, so every muscle is trained twice. It reuses those six days exactly: editing Push A or an Arnold day changes it here too.",
+    "rotations_per_week": 1,
+    "est_session_minutes": 55,
+    "deload_every_weeks": 4,
+    "best_for": "Lifters building muscle who can train six days a week.",
+    "workout_ids": [
+      "PPL_PUSH_A",
+      "PPL_PULL_A",
+      "PPL_LEGS_A",
+      "ARNOLD_CHEST_BACK",
+      "ARNOLD_SHOULDERS_ARMS",
+      "ARNOLD_LEGS"
+    ]
   }
 ]

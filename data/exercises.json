@@ -36,20 +36,8 @@
     "coaching_cue": "Chest support removes the lower back as a limiter \u2014 take it closer to true failure."
   },
   {
-    "exercise_key": "db_pullover",
-    "exercise_name": "Dumbbell Pullover",
-    "muscle_group": "Back",
-    "movement_pattern": "Shoulder Extension",
-    "target_muscle_primary": "Latissimus Dorsi",
-    "target_muscle_secondary": "Sternal Pectoralis; Long Head Triceps",
-    "equipment": "Dumbbell",
-    "is_compound": false,
-    "is_unilateral": false,
-    "coaching_cue": "Keep the hips low and think ribcage expansion at the stretch \u2014 an Arnold-era staple."
-  },
-  {
     "exercise_key": "lat_pulldown",
-    "exercise_name": "Lat Pulldown (Wide Pronated)",
+    "exercise_name": "Lat Pulldown",
     "muscle_group": "Back",
     "movement_pattern": "Vertical Pull",
     "target_muscle_primary": "Latissimus Dorsi",
@@ -97,7 +85,7 @@
   },
   {
     "exercise_key": "weighted_pullup",
-    "exercise_name": "Weighted Pull-Up",
+    "exercise_name": "Pull-Up",
     "muscle_group": "Back",
     "movement_pattern": "Vertical Pull",
     "target_muscle_primary": "Latissimus Dorsi",
@@ -240,18 +228,6 @@
     "coaching_cue": "Soft elbow held constant \u2014 the movement happens at the shoulder, not the elbow."
   },
   {
-    "exercise_key": "deficit_pushup",
-    "exercise_name": "Deficit Push-Up",
-    "muscle_group": "Chest",
-    "movement_pattern": "Horizontal Push",
-    "target_muscle_primary": "Sternal Pectoralis Major",
-    "target_muscle_secondary": "Triceps Brachii; Serratus Anterior",
-    "equipment": "Bodyweight",
-    "is_compound": true,
-    "is_unilateral": false,
-    "coaching_cue": "Protract the shoulder blades hard at lockout; stop two reps before form degrades."
-  },
-  {
     "exercise_key": "flat_db_press",
     "exercise_name": "Flat Dumbbell Bench Press",
     "muscle_group": "Chest",
@@ -313,7 +289,7 @@
   },
   {
     "exercise_key": "weighted_dip",
-    "exercise_name": "Weighted Chest Dip",
+    "exercise_name": "Chest Dip",
     "muscle_group": "Chest",
     "movement_pattern": "Decline Push",
     "target_muscle_primary": "Costal Pectoralis Major",
@@ -346,30 +322,6 @@
     "is_compound": false,
     "is_unilateral": false,
     "coaching_cue": "Posteriorly tilt the pelvis first \u2014 if the hips never curl under, this is just a hip flexor drill."
-  },
-  {
-    "exercise_key": "plank",
-    "exercise_name": "Weighted Plank",
-    "muscle_group": "Core",
-    "movement_pattern": "Anti-Extension",
-    "target_muscle_primary": "Rectus Abdominis",
-    "target_muscle_secondary": "Transverse Abdominis; Obliques",
-    "equipment": "Bodyweight",
-    "is_compound": false,
-    "is_unilateral": false,
-    "coaching_cue": "Actively push the floor away and tuck the pelvis \u2014 a sagging plank trains nothing."
-  },
-  {
-    "exercise_key": "back_extension",
-    "exercise_name": "45-Degree Back Extension",
-    "muscle_group": "Glutes",
-    "movement_pattern": "Hip Hinge",
-    "target_muscle_primary": "Gluteus Maximus",
-    "target_muscle_secondary": "Hamstrings; Erector Spinae",
-    "equipment": "Machine",
-    "is_compound": false,
-    "is_unilateral": false,
-    "coaching_cue": "Round the upper back slightly and posteriorly tilt the pelvis at the top for glute bias."
   },
   {
     "exercise_key": "hip_thrust",
@@ -526,18 +478,6 @@
     "is_compound": true,
     "is_unilateral": false,
     "coaching_cue": "Feet low on the platform for maximum quad bias; control the descent for a full 3 seconds."
-  },
-  {
-    "exercise_key": "arnold_press",
-    "exercise_name": "Arnold Press",
-    "muscle_group": "Shoulders",
-    "movement_pattern": "Vertical Push",
-    "target_muscle_primary": "Anterior Deltoid",
-    "target_muscle_secondary": "Lateral Deltoid; Triceps Brachii",
-    "equipment": "Dumbbell",
-    "is_compound": true,
-    "is_unilateral": false,
-    "coaching_cue": "Rotate from neutral to pronated as you press \u2014 the rotation is the point, so keep it slow."
   },
   {
     "exercise_key": "face_pull",

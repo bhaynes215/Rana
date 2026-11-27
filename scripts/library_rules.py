@@ -13,9 +13,13 @@ Freestyle workouts are the user's own and are not capped.
 # This is a ceiling, not a floor: a slot written as 2 sets stays at 2.
 MAX_SETS_PER_EXERCISE = 3
 
-# At most this many different exercises (slots) in any one workout day.
-MAX_EXERCISES_PER_WORKOUT = 6
+# There is deliberately NO cap on how many exercises a workout has: the fitness
+# expert writes each day by hand in the workbook's exercises_master sheet
+# (2026-11-26), and the build keeps every row exactly as written.
 
-# Used to re-estimate a workout's length after the caps trim it: each set is
-# assumed to take about this long to perform, plus the slot's own rest period.
+# A workout's length is estimated from its sets: each set is assumed to take
+# about this long to perform, plus the slot's own rest period, plus a flat
+# allowance for warm-up and moving between exercises (the median gap between
+# the workbook's original estimates and its set-by-set time was about 15 min).
 SECONDS_PER_SET = 45
+WARMUP_AND_TRANSITION_MINUTES = 15

@@ -1,11 +1,11 @@
 // Questionnaire interactivity (PRD section 8).
-// One page, thirteen .q-question divs; only one has the "active" class at
+// One page, fourteen .q-question divs; only one has the "active" class at
 // a time. Because nothing is ever removed from the DOM — just hidden — the
 // browser's own form state (what's typed, what's checked) IS the answer
 // state. There's no separate JS object mirroring it, so there's nothing to
 // keep in sync when the user goes back and changes an earlier answer.
 
-const TOTAL_QUESTIONS = 13;
+const TOTAL_QUESTIONS = 14;
 const questionEls = Array.from(document.querySelectorAll(".q-question"));
 const progressText = document.getElementById("q-progress");
 const progressFill = document.getElementById("q-progress-fill");
@@ -23,7 +23,8 @@ function showQuestion(index) {
   progressFill.style.width = `${((index + 1) / TOTAL_QUESTIONS) * 100}%`;
   backBtn.hidden = index === 0;
   clearStatus();
-  if (index === 12) refreshWeekdaysHint();
+  if (index === 12) refreshRecommendedDays();
+  if (index === 13) refreshWeekdaysHint();
 
   const firstInput = questionEls[index].querySelector("input");
   if (firstInput) firstInput.focus();
@@ -93,9 +94,12 @@ function validate(index) {
       return document.querySelectorAll('input[name="limitations"]:checked').length > 0
         ? null : 'Pick at least one, or "None of these."';
     case 11:
+      return document.querySelector('input[name="gym_type"]:checked')
+        ? null : "Pick one.";
+    case 12:
       return document.querySelector('input[name="training_days"]:checked')
         ? null : "Pick one.";
-    case 12: {
+    case 13: {
       const wanted = Number(document.querySelector('input[name="training_days"]:checked').value);
       const picked = document.querySelectorAll('input[name="training_weekdays"]:checked').length;
       return picked === wanted
@@ -148,7 +152,7 @@ document.querySelectorAll('.q-question input[type="text"], .q-question input[typ
 // Single-choice questions advance automatically after a short beat, so the
 // user doesn't have to also tap Continue for a decision they've already made.
 const AUTO_ADVANCE_GROUPS = [
-  "gender", "goal", "focus_area", "fitness_level", "activity_level", "training_days",
+  "gender", "goal", "focus_area", "fitness_level", "activity_level", "gym_type", "training_days",
 ];
 AUTO_ADVANCE_GROUPS.forEach((name) => {
   document.querySelectorAll(`input[name="${name}"]`).forEach((radio) => {
@@ -175,8 +179,28 @@ limitationCheckboxes.forEach((cb) => {
   });
 });
 
+// Days question: tag the day counts suggested for the fitness level picked
+// earlier ("Recommended"). A suggestion only: every option stays pickable.
+// Refreshed each time the question shows, in case they went back and
+// changed their fitness level.
+function refreshRecommendedDays() {
+  const level = document.querySelector('input[name="fitness_level"]:checked');
+  const recommended = (level && Rana.plan.RECOMMENDED_DAYS[level.value]) || [];
+  document.querySelectorAll('input[name="training_days"]').forEach((radio) => {
+    const label = radio.closest("label");
+    let tag = label.querySelector(".recommended-tag");
+    if (!tag) {
+      tag = document.createElement("span");
+      tag.className = "recommended-tag";
+      tag.textContent = "Recommended";
+      label.appendChild(tag);
+    }
+    tag.hidden = !recommended.includes(Number(radio.value));
+  });
+}
+
 // Which-days question's count is locked to whatever day count was picked
-// two questions earlier — the hint text is refreshed each time this
+// on the previous question — the hint text is refreshed each time this
 // question becomes active (see showQuestion above) in case the user went
 // back and changed it.
 function refreshWeekdaysHint() {
@@ -203,6 +227,9 @@ async function finish() {
     focus_area: document.querySelector('input[name="focus_area"]:checked').value,
     fitness_level: document.querySelector('input[name="fitness_level"]:checked').value,
     activity_level: document.querySelector('input[name="activity_level"]:checked').value,
+    // Where they train. Stored for later; nothing reads it yet, and it does
+    // not change the plan (every exercise has swap options instead).
+    gym_type: document.querySelector('input[name="gym_type"]:checked').value,
     limitations: Array.from(document.querySelectorAll('input[name="limitations"]:checked')).map((cb) => cb.value),
     training_days_per_week: document.querySelector('input[name="training_days"]:checked').value,
     training_weekdays: Array.from(document.querySelectorAll('input[name="training_weekdays"]:checked')).map((cb) => cb.value),
@@ -212,6 +239,7 @@ async function finish() {
   try {
     const data = await Rana.data.load();
     const splitId = Rana.plan.matchSplit(profile, data.splits);
+    if (!splitId) throw new Error("No split in the data matches this goal and day count.");
     const splitWorkouts = data.workoutsBySplit.get(splitId) || [];
     const weekdayMap = Rana.plan.buildWeekdayMap(splitWorkouts, profile.training_weekdays);
 

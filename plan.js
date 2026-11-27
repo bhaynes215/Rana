@@ -1,18 +1,16 @@
 // Plan matching + the fixed weekly schedule.
 //
-// v1 plan generation is a lookup, not AI (PRD section 8): goal, fitness
-// level and training days pick the best-fitting split out of the ones
-// already authored in data/splits.json. Equipment is not an input (PRD D1).
+// v1 plan generation is a lookup, not AI (PRD section 8). Since 2026-11-26
+// it is a plain table written by the fitness expert: the GOAL picks the
+// kind of program first, then the number of TRAINING DAYS picks the split
+// (SPLIT_FOR below). Fitness level does not change the split; it only marks
+// which day counts are "Recommended" on the questionnaire (RECOMMENDED_DAYS).
+// Equipment is not an input (PRD D1): every exercise has swap options instead.
 //
-// A note on "goal -> 4 templates": the PRD's decision log describes the
-// target model as 4 goal templates, but the actual workbook has 7 real
-// splits that already vary by days/week and experience level too (e.g. a
-// 3-day beginner full-body split and a 6-day advanced PPL split are both
-// "Hypertrophy"-flavored but very different programs). Picking the best of
-// the 7 real splits by goal + days + experience serves the user better than
-// forcing a 4-way choice the authored content doesn't actually have, and it
-// doesn't reintroduce equipment as an axis — just uses the days/experience
-// axes that were already there. Worth flagging to the fitness expert.
+// A split lists its days in order, and someone training N days a week gets
+// the first N. That is how one split serves several day counts, e.g. Upper/
+// Lower: 3 days = Upper A, Lower A, Upper B; 4 adds Lower B; 5 adds Upper C;
+// 6 adds Lower C. And 3-day PPL = Push A, Pull A, Legs A.
 //
 // Fixed weekly schedule: PRD/CLAUDE.md are explicit that a missed day is
 // never silently rescheduled — Monday is always push, every week, forever.
@@ -24,53 +22,64 @@
 window.Rana = window.Rana || {};
 
 Rana.plan = (() => {
-  const GOAL_TO_PRIMARY_GOAL = {
-    "build-muscle": "Hypertrophy",
-    "lose-fat": "Hypertrophy", // preserve muscle in a deficit — same structural need as hypertrophy
-    "get-stronger": "Strength",
-    "general-fitness": "General Fitness",
+  // goal -> { days per week -> split_id }. "Lose fat" trains the same way as
+  // "build muscle" (keep the muscle while in a calorie deficit); the deficit
+  // itself comes from the calorie target on the results screen.
+  const BUILD_MUSCLE = { 3: "SPLIT_PPL", 4: "SPLIT_AESTHETIC", 5: "SPLIT_HYBRID", 6: "SPLIT_PPL_ARNOLD" };
+  const SPLIT_FOR = {
+    "build-muscle": BUILD_MUSCLE,
+    "lose-fat": BUILD_MUSCLE,
+    "get-stronger": { 3: "SPLIT_UL", 4: "SPLIT_UL", 5: "SPLIT_UL", 6: "SPLIT_UL" },
+    "general-fitness": { 3: "SPLIT_FB", 4: "SPLIT_UL", 5: "SPLIT_UL", 6: "SPLIT_UL" },
   };
 
-  const FITNESS_LEVEL_TO_EXPERIENCE = {
-    "never-trained": "Beginner",
-    "returning": "Beginner",
-    "consistently": "Intermediate",
-    // Note: no split matches "Advanced" from a v1 questionnaire answer, since
-    // none of the 3 fitness-level options self-report as advanced. The
-    // Arnold split (Advanced-only) is in the library but currently
-    // unreachable by the matcher — fine for v1, worth a future "advanced"
-    // self-report option if that split should ever get used.
+  // Which day counts get a "Recommended" tag on the days question. A
+  // suggestion only: every option stays pickable.
+  const RECOMMENDED_DAYS = {
+    "never-trained": [3, 4],
+    "returning": [3, 4],
+    "consistently": [4, 5],
   };
 
   const WEEKDAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  function scoreSplit(split, profile) {
-    const wantGoal = GOAL_TO_PRIMARY_GOAL[profile.goal];
-    const wantExperience = FITNESS_LEVEL_TO_EXPERIENCE[profile.fitness_level];
-    const wantDays = Number(profile.training_days_per_week);
-
-    let score = 0;
-    score += split.primary_goal === wantGoal ? 1000 : 0;
-    score -= Math.abs(split.days_per_week - wantDays) * 50;
-    score += split.experience_level === wantExperience ? 10 : 0;
-    return score;
+  // The split for this profile, from the table above. Returns the split_id
+  // (not the full split object) — callers fetch details from Rana.data when
+  // they need them. Returns null if the table names a split that isn't in
+  // the data (e.g. someone renamed it in the workbook), so callers can say so.
+  function matchSplit(profile, splits) {
+    const byDays = SPLIT_FOR[profile.goal] || SPLIT_FOR["general-fitness"];
+    const splitId = byDays[Number(profile.training_days_per_week)] || byDays[3];
+    return splits.some((s) => s.split_id === splitId) ? splitId : null;
   }
 
-  // Picks the single best-fitting split for this profile. Returns the
-  // split_id (not the full split object) — callers fetch details from
-  // Rana.data when they need them, keeping this function free of a
-  // dependency on data.js having already loaded.
-  function matchSplit(profile, splits) {
-    let best = null;
-    let bestScore = -Infinity;
-    for (const split of splits) {
-      const score = scoreSplit(split, profile);
-      if (score > bestScore) {
-        bestScore = score;
-        best = split;
-      }
-    }
-    return best ? best.split_id : null;
+  // A saved plan can point at a split or workout day that no longer exists,
+  // because the program is still being designed (e.g. Anterior/Posterior was
+  // removed on 2026-11-26). Rather than break every screen, re-pick the split
+  // from the saved questionnaire answers, keeping the same weekdays, start
+  // date and status. Called by data.js every time the data loads. Returns
+  // true if the plan was changed.
+  function repairPlan(data) {
+    const plan = Rana.storage.getPlan();
+    const profile = Rana.storage.getProfile();
+    if (!plan || !profile) return false;
+    const mappedIds = Object.values(plan.weekday_map || {}).filter(Boolean);
+    const intact = data.splitById.has(plan.split_id) && mappedIds.every((id) => data.workoutById.has(id));
+    if (intact) return false;
+
+    const splitId = matchSplit(profile, data.splits);
+    if (!splitId) return false;
+    const weekdays = plan.training_weekdays || profile.training_weekdays || [];
+    Rana.storage.savePlan({
+      ...plan,
+      split_id: splitId,
+      training_weekdays: weekdays,
+      weekday_map: buildWeekdayMap(data.workoutsBySplit.get(splitId) || [], weekdays),
+      reassigned_at: new Date().toISOString(),
+      reassigned_from: plan.split_id,
+    });
+    console.warn(`Plan reassigned: ${plan.split_id} no longer exists, now ${splitId}.`);
+    return true;
   }
 
   // Assigns the split's workout days to the user's chosen training weekdays,
@@ -231,6 +240,20 @@ Rana.plan = (() => {
     });
   }
 
+  // --- Abs: an optional section at the end of every suggested workout ---
+  // No program day assigns core work; instead every suggested workout ends
+  // with the core exercises to choose from (decision 2026-11-26). Exercises
+  // the workout already uses (as a main exercise or a swap option) are left
+  // out, so the same exercise never appears twice in one workout.
+  const ABS_HINT = "2–3 sets of 10–15 reps";
+
+  function absOptions(data, slots) {
+    const inWorkout = new Set(
+      slots.flatMap((s) => (data.optionsBySlot.get(s.slot_id) || []).map((o) => o.exercise_key))
+    );
+    return data.exercises.filter((e) => e.muscle_group === "Core" && !inWorkout.has(e.exercise_key));
+  }
+
   // "Swapped from Conventional Deadlift to protect your lower back."
   function swapText(pick, data) {
     const from = data.exerciseByKey.get(pick.replacedKey);
@@ -252,10 +275,13 @@ Rana.plan = (() => {
   }
 
   return {
-    GOAL_TO_PRIMARY_GOAL,
-    FITNESS_LEVEL_TO_EXPERIENCE,
+    SPLIT_FOR,
+    RECOMMENDED_DAYS,
     WEEKDAY_ORDER,
     matchSplit,
+    repairPlan,
+    ABS_HINT,
+    absOptions,
     buildWeekdayMap,
     weekdayAbbrev,
     toDateStr,

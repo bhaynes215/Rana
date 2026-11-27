@@ -139,8 +139,20 @@
       <button type="button" class="btn-continue" data-continue>Continue</button>
     </div>
 
-    <!-- Q12: training days per week -->
+    <!-- Q12: where they train. Saved to the profile only: it doesn't change
+         the plan. Every exercise has swap options, so any of these gyms can
+         run the same program (decision 2026-11-26). -->
     <div class="q-question" data-index="11">
+      <h1 class="q-prompt">Where do you usually train?</h1>
+      <fieldset>
+        <label><input type="radio" name="gym_type" value="rec-center"> Rec center</label>
+        <label><input type="radio" name="gym_type" value="commercial-gym"> Commercial gym</label>
+        <label><input type="radio" name="gym_type" value="apartment-gym"> Apartment gym</label>
+      </fieldset>
+    </div>
+
+    <!-- Q13: training days per week -->
+    <div class="q-question" data-index="12">
       <h1 class="q-prompt">How many days a week can you train?</h1>
       <fieldset>
         <label><input type="radio" name="training_days" value="3"> 3 days</label>
@@ -150,8 +162,8 @@
       </fieldset>
     </div>
 
-    <!-- Q13: which days -->
-    <div class="q-question" data-index="12">
+    <!-- Q14: which days -->
+    <div class="q-question" data-index="13">
       <h1 class="q-prompt">Which days?</h1>
       <p id="q-weekdays-hint" class="intro">Pick the days you chose above.</p>
       <fieldset>

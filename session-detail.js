@@ -10,13 +10,15 @@ function getDateParam() {
 
 async function main() {
   const profile = Rana.storage.getProfile();
-  const plan = Rana.storage.getPlan();
+  let plan = Rana.storage.getPlan();
   if (!profile || !plan || plan.status !== "active") {
     window.location.href = "dashboard.html";
     return;
   }
 
   const data = await Rana.data.load();
+  // Re-read: loading the data may have repaired a plan whose split was removed.
+  plan = Rana.storage.getPlan();
   const dateStr = getDateParam();
   const finishedForDay = Rana.storage.getFinishedSessions().filter((s) => s.date === dateStr);
   const session = Rana.plan.getSessionForDate(dateStr, plan, data, finishedForDay);
@@ -80,6 +82,29 @@ async function main() {
 
     list.appendChild(card);
   });
+
+  // Optional abs, listed after the workout. Browse-only here: they're added
+  // while logging (active-session.js).
+  const abs = Rana.plan.absOptions(data, session.slots);
+  if (abs.length) {
+    const card = document.createElement("div");
+    card.className = "panel slot-card abs-panel";
+    const eyebrow = document.createElement("p");
+    eyebrow.className = "slot-pattern";
+    eyebrow.textContent = "Abs · Optional, recommended";
+    const names = document.createElement("ul");
+    names.className = "abs-list";
+    abs.forEach((ex) => {
+      const li = document.createElement("li");
+      li.textContent = ex.exercise_name;
+      names.appendChild(li);
+    });
+    const hint = document.createElement("p");
+    hint.className = "slot-prescription";
+    hint.textContent = `${Rana.plan.ABS_HINT}. Pick any while logging.`;
+    card.append(eyebrow, names, hint);
+    list.appendChild(card);
+  }
 
   const beginBtn = document.getElementById("begin-btn");
   const isToday = dateStr === Rana.plan.todayStr();

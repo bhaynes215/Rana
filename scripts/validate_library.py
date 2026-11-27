@@ -17,7 +17,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from library_rules import MAX_EXERCISES_PER_WORKOUT, MAX_SETS_PER_EXERCISE
+from library_rules import MAX_SETS_PER_EXERCISE
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -32,16 +32,26 @@ def main():
         sys.exit(1)
 
     slot_ids = {s["slot_id"] for s in slots_doc["slots"]}
+    splits = json.loads((DATA_DIR / "splits.json").read_text())
+    workout_ids = {w["workout_id"] for w in json.loads((DATA_DIR / "workouts.json").read_text())}
 
     errors = []
+    # Every split lists its days in order (workout_ids), and each must exist.
+    for split in splits:
+        ids = split.get("workout_ids") or []
+        if not ids:
+            errors.append(f"{split['split_id']}: no workout_ids")
+        for wid in ids:
+            if wid not in workout_ids:
+                errors.append(f"{split['split_id']}: unknown workout {wid}")
     for opt in slots_doc["slot_options"]:
         if opt["slot_id"] not in slot_ids:
             errors.append(f"slot_option references unknown slot_id {opt['slot_id']}")
         if opt["exercise_key"] not in valid_keys:
             errors.append(f"slot {opt['slot_id']}: exercise_key '{opt['exercise_key']}' not in exercises.json")
 
-    # Program caps (scripts/library_rules.py): at most 3 sets per exercise, at
-    # most 6 different exercises per workout, and no exercise twice in one workout.
+    # Program rules (scripts/library_rules.py): at most 3 sets per exercise (there
+    # is no limit on exercises per workout), and no exercise twice in one workout.
     primary_by_slot = {
         o["slot_id"]: o["exercise_key"] for o in slots_doc["slot_options"] if o["option_rank"] == 1
     }
@@ -56,8 +66,6 @@ def main():
         if option_count[slot["slot_id"]] == 0:
             errors.append(f"slot {slot['slot_id']}: has no exercise options")
     for workout_id, group in by_workout.items():
-        if len(group) > MAX_EXERCISES_PER_WORKOUT:
-            errors.append(f"{workout_id}: {len(group)} exercises (max {MAX_EXERCISES_PER_WORKOUT})")
         keys = [primary_by_slot.get(s["slot_id"]) for s in group]
         repeated = sorted({k for k in keys if k and keys.count(k) > 1})
         if repeated:

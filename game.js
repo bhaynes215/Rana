@@ -468,9 +468,10 @@ Rana.game = (() => {
   // label it as one (PRD section 7.5), never as a guarantee.
   function computeProjectedStats(profile) {
     const sessionsOver12Weeks = Number(profile.training_days_per_week) * 12;
-    // Every program workout is capped at 6 exercises x 3 sets (scripts/library_rules.py),
-    // so a session is 18 working sets or just under: the real average is 17.9.
-    const avgSetsPerSession = 18;
+    // Program workouts are written by hand in the workbook (4-7 exercises,
+    // at most 3 sets each, scripts/library_rules.py). Across the 25 workout
+    // days the average is 15.8 working sets per session (2026-11-26), so 16.
+    const avgSetsPerSession = 16;
 
     const points = {
       STR: sessionsOver12Weeks * avgSetsPerSession * 0.35,
