@@ -49,10 +49,6 @@ Rana.game = (() => {
     // A strength gain this big (in %) gets the big "NEW RECORD" moment on the
     // summary screen. Smaller gains still earn their XP, just with a quieter pop.
     NEW_RECORD_PERCENT: 5,
-
-    // INT ("following the plan") points per completed session. A stand-in
-    // until PRD open question 13.3 (calibration / INT) is decided.
-    INT_POINTS_PER_SESSION: 4,
   };
 
   // ---------------------------------------------------------------------
@@ -195,7 +191,6 @@ Rana.game = (() => {
       currentStreak: 0,
       longestStreak: 0,
       sessionsCompleted: 0, // sessions that earned session XP (planned or not)
-      plannedSessionsCompleted: 0, // suggested workouts done as prescribed (INT)
       strengthIncreaseCount: 0,
     };
 
@@ -263,7 +258,6 @@ Rana.game = (() => {
           ledger.currentStreak += 1;
           ledger.longestStreak = Math.max(ledger.longestStreak, ledger.currentStreak);
           ledger.sessionsCompleted += 1;
-          ledger.plannedSessionsCompleted += 1;
 
           const boostedSessions = Math.min(ledger.currentStreak, XP_RULES.STREAK_MAX_SESSIONS);
           entry.streakMultiplier = 1 + boostedSessions * XP_RULES.STREAK_STEP;
@@ -367,7 +361,7 @@ Rana.game = (() => {
   }
 
   // ---------------------------------------------------------------------
-  // Stats (STR / AGI / VIT / INT)
+  // Stats (STR / AGI / VIT)
   // ---------------------------------------------------------------------
   // Everyone starts at 0 — the app can't know how strong you are before
   // you've trained, so it doesn't guess. Stats are only earned from logged
@@ -377,11 +371,11 @@ Rana.game = (() => {
     return Math.floor(4 * Math.sqrt(points));
   }
 
-  // Stat points earned from real logged sets (pass FINISHED sets only). INT
-  // comes from suggested workouts done as prescribed — "following the plan" —
-  // which the XP ledger counts, so pass ledger.plannedSessionsCompleted in.
-  function computeStatPoints(loggedSets, exerciseByKey, plannedSessionsCompleted) {
-    const points = { STR: 0, AGI: 0, VIT: 0, INT: 0 };
+  // Stat points earned from real logged sets (pass FINISHED sets only).
+  // There is no Intelligence stat (removed 2026-11-27): following the plan
+  // is rewarded through the streak boost in XP instead.
+  function computeStatPoints(loggedSets, exerciseByKey) {
+    const points = { STR: 0, AGI: 0, VIT: 0 };
 
     for (const set of loggedSets) {
       const ex = exerciseByKey.get(set.exercise_key);
@@ -401,7 +395,6 @@ Rana.game = (() => {
       if (repsNum >= 12) points.AGI += 1;
     }
 
-    points.INT = (plannedSessionsCompleted || 0) * XP_RULES.INT_POINTS_PER_SESSION;
     return points;
   }
 
@@ -477,14 +470,12 @@ Rana.game = (() => {
       STR: sessionsOver12Weeks * avgSetsPerSession * 0.35,
       AGI: sessionsOver12Weeks * avgSetsPerSession * 0.25,
       VIT: sessionsOver12Weeks * avgSetsPerSession * 1.0,
-      INT: sessionsOver12Weeks * XP_RULES.INT_POINTS_PER_SESSION,
     };
 
     return {
       STR: statValue(points.STR),
       AGI: statValue(points.AGI),
       VIT: statValue(points.VIT),
-      INT: statValue(points.INT),
     };
   }
 

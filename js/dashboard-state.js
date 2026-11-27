@@ -116,8 +116,8 @@ Rana.dashboard = (() => {
 
     // Everyone starts at 0; stats only come from logged work.
     const projected = Rana.game.computeProjectedStats(profile);
-    const points = Rana.game.computeStatPoints(finishedSets, data.exerciseByKey, ledger.plannedSessionsCompleted);
-    const stats = ["STR", "AGI", "VIT", "INT"].map((key) => ({
+    const points = Rana.game.computeStatPoints(finishedSets, data.exerciseByKey);
+    const stats = ["STR", "AGI", "VIT"].map((key) => ({
       key,
       current: Rana.game.statValue(points[key]),
       target: projected[key],
@@ -258,7 +258,7 @@ Rana.dashboard = (() => {
       const projected = Rana.game.computeProjectedStats({ training_days_per_week: 3 });
       return {
         ...FIXTURE,
-        stats: ["STR", "AGI", "VIT", "INT"].map((key) => ({ key, current: 0, target: projected[key] })),
+        stats: ["STR", "AGI", "VIT"].map((key) => ({ key, current: 0, target: projected[key] })),
       };
     }
 

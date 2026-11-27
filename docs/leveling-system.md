@@ -55,7 +55,7 @@ The plan is a suggestion. The streak boost is the reward for following it; train
 - **Session XP is earned at most once per day**, however many workouts you do. If the suggested workout and a freestyle workout are both done, the suggested one counts.
 - **Strength XP follows the exercise, not the workout type.** Every exercise keeps one record across suggested and freestyle workouts, so getting stronger always counts.
 - **Only finished workouts count.** A workout still in progress earns nothing until you tap Finish; discarding one deletes its sets.
-- **INT** only grows from suggested workouts done as prescribed ("following the plan").
+- Following the plan is rewarded through the streak boost above. (There is no Intelligence stat: it was removed 2026-11-27.)
 - A freestyle workout shows on the week strip as **off-plan** (not missed) when it replaces a suggested workout.
 
 ## Fixing mistakes (added 2026-11-25)
@@ -103,9 +103,8 @@ Shown under your name on the dashboard, and announced on session complete when e
 | Iron Will | 50 sessions completed |
 | Centurion | 100 sessions completed |
 
-## Stats (STR / AGI / VIT / INT)
+## Stats (STR / AGI / VIT)
 - All start at **0** and are only earned from logged work (rules unchanged otherwise; see `computeStatPoints` in `game.js`).
-- **INT:** +4 points per completed session. This is a stand-in until PRD open question §13.3 is decided.
 - The results (analysis) screen no longer shows stats. Since 2026-11-25 it shows the split and a 12-week route instead: tier milestones forecast by `forecastRoute()` from consistency XP only (a floor, labeled "at least"), over calibration/build/deload phases. The dashboard's status matrix still shows each stat against a 12-week target.
 
 ## Level-up moments

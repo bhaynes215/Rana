@@ -507,11 +507,11 @@ async function main() {
 
   // --- Stat gains (everyone starts at 0; stats only come from logged work) ---
   const pointsBefore = Rana.game.computeStatPoints(
-    allSets.filter((s) => s.session_id !== session.session_id), data.exerciseByKey, without.plannedSessionsCompleted);
-  const pointsAfter = Rana.game.computeStatPoints(allSets, data.exerciseByKey, after.plannedSessionsCompleted);
+    allSets.filter((s) => s.session_id !== session.session_id), data.exerciseByKey);
+  const pointsAfter = Rana.game.computeStatPoints(allSets, data.exerciseByKey);
   const statGainsEl = document.getElementById("stat-gains");
   statGainsEl.innerHTML = "";
-  ["STR", "AGI", "VIT", "INT"].forEach((stat) => {
+  ["STR", "AGI", "VIT"].forEach((stat) => {
     const statBefore = Rana.game.statValue(pointsBefore[stat]);
     const statAfter = Rana.game.statValue(pointsAfter[stat]);
     const row = document.createElement("p");

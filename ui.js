@@ -90,14 +90,6 @@ Rana.ui = (() => {
       ],
       footer: "It's the stat that rewards simply doing the work. The number after the arrow is your 12-week target if you follow the plan.",
     },
-    INT: {
-      title: "Intelligence",
-      subtitle: "INT",
-      paragraphs: [
-        "How well you follow the plan. It grows each time you finish a suggested workout as written, not from freestyle workouts.",
-      ],
-      footer: "Training smart beats training hard. The number after the arrow is your 12-week target if you follow the plan.",
-    },
   };
 
   // ---------------------------------------------------------------------
