@@ -61,8 +61,27 @@ Rana.storage = (() => {
   }
 
   // --- Profile (the questionnaire's answers) ---
+  // The questionnaire used to save its number answers as text ("21"); older
+  // saved profiles still have them that way. Every read goes through
+  // normalizeProfile, so the rest of the app only ever sees real numbers.
+  //   starting_lifts: { [exercise_key]: { weight, reps } | { skipped: true } }
+  //   (the "recent set" answers; they only set Progress goals, never the plan).
+  const NUMBER_FIELDS = ["age", "height", "weight_current", "weight_target", "training_days_per_week"];
+
+  function normalizeProfile(profile) {
+    if (!profile) return null;
+    const out = { ...profile };
+    for (const field of NUMBER_FIELDS) {
+      const value = out[field];
+      out[field] = value === null || value === undefined || value === "" || Number.isNaN(Number(value)) ? null : Number(value);
+    }
+    out.limitations = Array.isArray(out.limitations) ? out.limitations : [];
+    out.starting_lifts = out.starting_lifts && typeof out.starting_lifts === "object" ? out.starting_lifts : {};
+    return out;
+  }
+
   function getProfile() {
-    return read(KEYS.profile, null);
+    return normalizeProfile(read(KEYS.profile, null));
   }
   function saveProfile(profile) {
     write(KEYS.profile, profile);
@@ -215,6 +234,10 @@ Rana.storage = (() => {
       finished_at: null,
       exercises: [], // freestyle only: exercise_keys in the order added
       difficulty: null,
+      // The rest timer: when the last set was marked done and how long to
+      // rest. Computed from the timestamp, so it survives closing the tab.
+      rest_started_at: null,
+      rest_seconds: null,
     };
     sessions.push(session);
     write(KEYS.sessions, sessions);
@@ -301,6 +324,7 @@ Rana.storage = (() => {
 
   return {
     getProfile,
+    normalizeProfile,
     saveProfile,
     getPlan,
     savePlan,

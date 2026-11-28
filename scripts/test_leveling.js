@@ -32,7 +32,7 @@ const ctx = {
 };
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js"]) {
+for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js", "js/core/progress.js", "js/core/coach.js"]) {
   vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx);
 }
 const { Rana } = ctx;
@@ -96,10 +96,10 @@ function freestyleSession(date, exerciseKey, nSets, weight = 60, reps = 10) {
   for (let k = 0; k < nSets; k++) sets.push({ session_id: session.session_id, date, slot_id: null, exercise_key: exerciseKey, set_index: k + 1, weight, reps });
   return { session, sets };
 }
-function ledgerOf(parts, plan, today) {
+function ledgerOf(parts, plan, today, profile = null) {
   const sessions = parts.map((p) => p.session);
   const sets = parts.flatMap((p) => p.sets);
-  return Rana.game.computeXpLedger(sets, sessions, plan, data, today);
+  return Rana.game.computeXpLedger({ sets, sessions, plan, data, profile, today });
 }
 
 // ---------- 1. Simulation: 4 days/week for 3 years, always the suggested workout ----------
@@ -136,6 +136,21 @@ for (const [label, days] of [["1 year", 364], ["2 years", 728]]) {
   const lv = Rana.game.levelForXp(l.totalXp);
   console.log(`  at ${label}: level ${lv} (${Rana.game.tierForLevel(lv)})`);
 }
+// When Level 50 lands, with and without the lift-target bonus (so the effect of the bonus is visible).
+function weeksToLevel(l, target, withoutTargets = false) {
+  let xp = 0;
+  for (const date of [...l.entries.keys()].sort()) {
+    const e = l.entries.get(date);
+    xp += e.totalXp - (withoutTargets ? e.targetXp : 0);
+    if (Rana.game.levelForXp(xp) >= target) return Math.round(((new Date(date) - new Date(START)) / 86400000) / 7);
+  }
+  return null;
+}
+const targetBonusTotal = [...ledger.entries.values()].reduce((a, e) => a + e.targetXp, 0);
+const targetHitCount = [...ledger.entries.values()].reduce((a, e) => a + e.targetHits.length, 0);
+console.log(`  lift-target bonus: ${targetHitCount} hits = ${targetBonusTotal.toLocaleString()} XP over 3 years`);
+const wk = (n) => (n === null ? `not reached in 3 years (Level ${Rana.game.levelForXp(ledger.totalXp - targetBonusTotal)} at week 156)` : `week ${n}`);
+console.log(`  Level 50: ${wk(weeksToLevel(ledger, 50))} with the bonus; ${wk(weeksToLevel(ledger, 50, true))} without it`);
 check("3 years at 4 days/week lands near Mythic (Level 49-53)", level >= 49 && level <= 53, `level ${level}`);
 check("titles earned after 3 years", Rana.game.earnedTitles(ledger).length === 4, Rana.game.earnedTitles(ledger).map((t) => t.name).join(", "));
 
@@ -337,12 +352,11 @@ check("swap text names the original exercise and the joint", Rana.plan.swapText(
 check("caution text names the joint", Rana.plan.cautionText(["lower-back"]).includes("lower back"));
 check("a profile's 'none' limitation is ignored", Rana.plan.activeLimitations({ limitations: ["none"] }).length === 0);
 
-// ---------- 6. Levels, tiers, stats ----------
+// ---------- 6. Levels and tiers ----------
 console.log("");
 check("level curve: L5 = 704, L50 = 105,644", Rana.game.xpForLevel(5) === 704 && Rana.game.xpForLevel(50) === 105644);
 check("levelForXp boundaries", Rana.game.levelForXp(0) === 1 && Rana.game.levelForXp(43) === 1 && Rana.game.levelForXp(44) === 2 && Rana.game.levelForXp(105644) === 50 && Rana.game.levelForXp(105643) === 49);
 check("tiers", ["SPARK", "IGNITION", "AWAKENED", "ASCENDED", "TRANSCENDENT", "MYTHIC"].join() === [1, 5, 13, 22, 36, 50].map(Rana.game.tierForLevel).join());
-check("stats start at 0", Rana.game.statValue(0) === 0);
 
 
 // ---------- 7. Two plans: switching, own-plan days, saved plans (2026-11-27) ----------
@@ -420,6 +434,137 @@ check("repairPlan fixes a removed workout in the history but keeps the own-plan 
 Rana.storage.startSession({ type: "freestyle", title: "x", date: today });
 check("a switch after a workout today starts tomorrow", Rana.plan.switchEffectiveDate() > today);
 store.clear();
+
+
+// ---------- 8. Lift targets and the +500 bonus ----------
+console.log("");
+const K = benchKey; // a tracked main lift (slot 1 of a workout day)
+const RETURNING = { fitness_level: "returning", created_at: "2027-01-01T12:00:00.000Z", starting_lifts: { [K]: { weight: 150, reps: 5 } } };
+const monSession = (n, weight, reps) => plannedSession(plan3, mondays[n], { [K]: { weight, reps } });
+const lift = (l) => l.lifts.get(K);
+const totalTargetXp = (l) => [...l.entries.values()].reduce((a, e) => a + e.targetXp, 0);
+
+check("nextTarget: +25% / +15% / +8% of 175, rounded up to 5 lb",
+  [Rana.game.nextTarget(175, "lb", { fitness_level: "never-trained" }), Rana.game.nextTarget(175, "lb", { fitness_level: "returning" }), Rana.game.nextTarget(175, "lb", { fitness_level: "consistently" })].join() === "220,205,190");
+check("nextTarget for reps rounds up and is at least one more rep",
+  Rana.game.nextTarget(8, "reps", { fitness_level: "never-trained" }) === 10 && Rana.game.nextTarget(3, "reps", { fitness_level: "consistently" }) === 4);
+
+let T = ledgerOf([], plan3, S2, RETURNING);
+check("a starting-lift answer sets the first target (150 x 5 -> 175 -> 205)", lift(T) && lift(T).target.value === 205 && lift(T).target.source === "answer" && Math.round(lift(T).start) === 175);
+check("an answer is never a personal best", lift(T).best === 0 && lift(T).sessions === 0);
+
+T = ledgerOf([monSession(0, 200, 8), monSession(1, 200, 8), monSession(2, 200, 8)], plan3, mondays[2], RETURNING);
+check("no target bonus during the 3 calibration sessions, even past the target", totalTargetXp(T) === 0);
+check("after calibration, an answer the logs already beat is replaced by a target from the logs",
+  lift(T).target.source === "calibration" && lift(T).target.value === 295 && Math.round(lift(T).start) === 253);
+
+const calSessions = [monSession(0, 200, 8), monSession(1, 200, 8), monSession(2, 200, 8)];
+const hitSession = monSession(3, 245, 8); // e1rm 310 beats the 295 target
+const T4 = ledgerOf([...calSessions, hitSession], plan3, mondays[3], RETURNING);
+const hitEntry = T4.entries.get(mondays[3]);
+check("reaching the target earns +500 once", hitEntry.targetXp === 500 && hitEntry.targetHits.length === 1 && hitEntry.targetHits[0].value === 295);
+check("a new target appears after a hit (310 -> 360)", lift(T4).target.value === 360 && lift(T4).target.source === "hit" && lift(T4).hits.length === 1);
+check("per-workout XP still sums exactly to total XP with bonuses",
+  [...calSessions, hitSession].reduce((a, p) => a + Rana.game.xpForSession(T4, p.session), 0) === T4.totalXp);
+const noHit = ledgerOf([...calSessions, monSession(3, 200, 9)], plan3, mondays[3], RETURNING);
+check("a session below the target earns no bonus and the target stays", totalTargetXp(noHit) === 0 && lift(noHit).target.value === 295);
+const huge = ledgerOf([...calSessions, monSession(3, 400, 8)], plan3, mondays[3], RETURNING);
+check("a huge jump pays the bonus once, and the next target is above it", huge.entries.get(mondays[3]).targetXp === 500 && lift(huge).target.value > 400 * (1 + 8 / 30));
+check("deleting the set that hit the target removes the bonus", totalTargetXp(ledgerOf(calSessions, plan3, mondays[3], RETURNING)) === 0 && T4.totalXp > ledgerOf(calSessions, plan3, mondays[3], RETURNING).totalXp + 500 - 1);
+
+const skipped = { fitness_level: "returning", starting_lifts: { [K]: { skipped: true } } };
+const two = ledgerOf([monSession(0, 100, 8), monSession(1, 100, 8)], plan3, mondays[1], skipped);
+const three3 = ledgerOf([monSession(0, 100, 8), monSession(1, 100, 8), monSession(2, 100, 8)], plan3, mondays[2], skipped);
+check("a skipped lift has no target during calibration", lift(two).target === null);
+check("a skipped lift gets its target from its 3rd logged session (127 -> 150)", lift(three3).target && lift(three3).target.value === 150 && lift(three3).target.source === "calibration" && Math.round(lift(three3).start) === 127);
+
+const PULLUP = "weighted_pullup"; // Pull-Up: bodyweight, a tracked main lift
+const bwProfile = { fitness_level: "never-trained", starting_lifts: { [PULLUP]: { weight: 0, reps: 8 } } };
+const bwCal = [0, 1, 2].map((n) => freestyleSession(mondays[n], PULLUP, 3, 0, 8));
+const bw = ledgerOf([...bwCal, freestyleSession(mondays[3], PULLUP, 3, 0, 10)], plan3, mondays[3], bwProfile);
+check("a bodyweight lift counts reps: 8 reps -> target 10", ledgerOf([], plan3, S2, bwProfile).lifts.get(PULLUP).target.value === 10 && bw.lifts.get(PULLUP).unit === "reps");
+check("hitting the rep target pays the bonus and sets the next one (10 -> 13)", bw.entries.get(mondays[3]).targetXp === 500 && bw.lifts.get(PULLUP).target.value === 13);
+
+const CURL = "bb_curl";
+const curls = ledgerOf([0, 1, 2, 3].map((n) => freestyleSession(mondays[n], CURL, 3, 30 + n * 20, 10)), plan3, mondays[3], RETURNING);
+check("accessories (curls) never get targets or bonuses", curls.lifts.get(CURL).target === null && totalTargetXp(curls) === 0);
+check("only first-slot exercises can have targets", Rana.plan.targetLiftKeys(data).has("back_squat") && !Rana.plan.targetLiftKeys(data).has(CURL));
+
+// ---------- 9. The coach's progression rule and Rana's lines ----------
+console.log("");
+const slot68 = { working_sets: 3, rep_range: "6-8" };
+function coachHist(key, specs) { // specs oldest first: { sets: [[weight, reps], ...], difficulty }
+  const sessions = [], sets = [];
+  specs.forEach((spec, i) => {
+    const sess = makeSession(addDays(S2, i * 7), "freestyle", null, "Push Day A (Chest Focus)");
+    sess.difficulty = spec.difficulty ?? 3;
+    sessions.push(sess);
+    spec.sets.forEach(([w, r], k) => sets.push({ session_id: sess.session_id, date: sess.date, exercise_key: key, set_index: k + 1, weight: w, reps: r }));
+  });
+  return { sessions, sets };
+}
+const advise = (key, specs, slot = slot68) => Rana.coach.suggestion(key, slot, { data, ...coachHist(key, specs) });
+const ok3 = { sets: [[140, 7], [140, 7], [140, 6]] };
+const top3 = { sets: [[140, 8], [140, 8], [140, 8]] };
+const miss3 = { sets: [[140, 5], [140, 5], [140, 7]] };
+
+check("coach: never done -> first-time, nothing pre-filled", advise("bench", []).kind === "first-time" && advise("bench", []).weight === null);
+check("coach: fewer than 3 sessions -> calibrating at last weight", advise("bench", [ok3, ok3]).kind === "calibrating" && advise("bench", [ok3, ok3]).weight === 140);
+check("coach: every set at the top of the range -> add 5 lb upper body", (() => { const a = advise("bench", [ok3, ok3, top3]); return a.kind === "add" && a.weight === 145 && a.text.startsWith("Add 5 lb to your Barbell Bench Press"); })());
+check("coach: lower body adds 10 lb", (() => { const a = advise("back_squat", [ok3, ok3, top3]); return a.kind === "add" && a.weight === 150; })());
+check("coach: a bodyweight lift adds weight once every set hits the top", (() => { const a = advise(PULLUP, [{ sets: [[0, 7], [0, 7], [0, 6]] }, { sets: [[0, 7], [0, 7], [0, 6]] }, { sets: [[0, 8], [0, 8], [0, 8]] }]); return a.kind === "add" && a.weight === 5 && a.text.includes("adding 5 lb"); })());
+check("coach: a workout rated all-out -> hold everything", (() => { const a = advise("bench", [ok3, ok3, { ...top3, difficulty: 5 }]); return a.kind === "hold-hard" && a.weight === 140 && a.text.includes("Last Push Day A felt all-out"); })());
+check("coach: inside the range -> hold the weight, go for a rep", (() => { const a = advise("bench", [ok3, ok3, ok3]); return a.kind === "hold-reps" && a.weight === 140; })());
+check("coach: missing the range on 2+ sets once -> hold", advise("bench", [ok3, ok3, miss3]).kind === "hold-missed");
+check("coach: missing it two sessions in a row -> drop 10% (140 -> 125)", (() => { const a = advise("bench", [ok3, miss3, miss3]); return a.kind === "drop" && a.weight === 125; })());
+check("coach: fewer sets than prescribed never counts as 'every set hit the top'", advise("bench", [ok3, ok3, { sets: [[140, 8], [140, 8]] }]).kind === "hold-reps");
+check("coach: a freestyle exercise (no slot) uses an 8-12 range", Rana.coach.suggestion("bench", null, { data, ...coachHist("bench", [{ sets: [[100, 10]] }, { sets: [[100, 10]] }, { sets: [[100, 12]] }]) }).kind === "add");
+
+const tipCtx = { data, plan: plan3, today: S2, sessions: [], sets: [], profile: { limitations: [] } };
+check("today tip: your very first workout", Rana.coach.todayTip(tipCtx).text.startsWith("Your first "), Rana.coach.todayTip(tipCtx).text);
+check("today tip: a rest day says what's next", (() => { const t = Rana.coach.todayTip({ ...tipCtx, today: addDays(S2, 1) }).text; return t.startsWith("Rest today. Next up is") && t.includes("Wednesday"); })(), Rana.coach.todayTip({ ...tipCtx, today: addDays(S2, 1) }).text);
+check("progress tip: the fastest-rising lift", (() => { const t = Rana.coach.progressTip({ today: "2026-11-28", rows: [{ unit: "lb", state: "tracking", name: "Squat", current: 245, target: 275, history: [{ date: "2026-10-20", score: 225 }, { date: "2026-11-27", score: 245 }] }] }).text; return t === "Your Squat is up 20 lb in 6 weeks. That's your fastest lift right now."; })());
+check("progress tip: otherwise the nearest target", Rana.coach.progressTip({ today: "2026-11-28", rows: [{ unit: "lb", state: "tracking", name: "Bench", current: 190, target: 205, history: [] }] }).text === "15 lb to go on your Bench target.");
+check("progress tip: nothing logged yet", Rana.coach.progressTip({ today: "2026-11-28", rows: [] }).kind === "empty");
+const sumBase = { data, levelBefore: 7, levelAfter: 7, sets: 18, minutes: 52 };
+check("summary line: target hit beats level-up beats new best beats plain",
+  Rana.coach.summaryLine({ ...sumBase, levelAfter: 8, increases: [{ exerciseKey: "bench", percent: 4 }], targetHits: [{ exerciseKey: "bench", value: 205, next: 225 }] }).kind === "target" &&
+  Rana.coach.summaryLine({ ...sumBase, levelAfter: 8, increases: [{ exerciseKey: "bench", percent: 4 }] }).kind === "level-up" &&
+  Rana.coach.summaryLine({ ...sumBase, increases: [{ exerciseKey: "bench", percent: 4 }] }).kind === "new-best" &&
+  Rana.coach.summaryLine(sumBase).text === "Logged. 18 sets in 52 minutes.");
+check("streak line", Rana.coach.streakLine({ streak: 6 }).lead === "6-workout streak." && Rana.coach.streakLine({ restDay: true }).text.startsWith("Rest day") && Rana.coach.streakLine({ streak: 0 }).text === "Today starts your streak.");
+check("plan reveal line", Rana.coach.planRevealLine({ name: "Brennan", goal: "get-stronger", days: 4 }) === "You're set, Brennan. This is the plan I'd pick for getting stronger on 4 days.");
+
+// ---------- 10. Profile, main lifts and the read models ----------
+console.log("");
+const np = Rana.storage.normalizeProfile({ age: "21", height: "178", weight_current: "170", weight_target: "", training_days_per_week: "4", limitations: undefined });
+check("profile numbers saved as text come back as numbers", np.age === 21 && np.height === 178 && np.weight_current === 170 && np.training_days_per_week === 4);
+check("an empty target weight is null; starting_lifts and limitations default", np.weight_target === null && JSON.stringify(np.starting_lifts) === "{}" && Array.isArray(np.limitations));
+
+const mainsUL = Rana.plan.mainLifts(plan4, data, { limitations: [] });
+check("main lifts: one per day of an Upper/Lower 4-day plan, in week order", mainsUL.length === 4 && mainsUL.every((l) => Rana.plan.targetLiftKeys(data).has(l.exercise_key)), mainsUL.map((l) => l.exercise_key).join(", "));
+const pplArnold = { weekday_map: Rana.plan.buildWeekdayMap(data.workoutsBySplit.get("SPLIT_PPL_ARNOLD"), ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) }; // reuses PPL days, so build the map from the split's own day list
+const mainsPA = Rana.plan.mainLifts(pplArnold, data, { limitations: [] });
+check("main lifts: an exercise shared by two days appears once", new Set(mainsPA.map((l) => l.exercise_key)).size === mainsPA.length && mainsPA.length < 6, mainsPA.map((l) => l.exercise_key).join(", "));
+check("main lifts: a pull-up is a reps lift, a squat a lb lift", mainsPA.find((l) => l.exercise_key === PULLUP).unit === "reps" && mainsPA.find((l) => l.exercise_key === "back_squat").unit === "lb");
+
+const rows = Rana.progress.liftRows({
+  lifts: [{ exercise_key: K, unit: "lb" }, { exercise_key: "front_squat", unit: "lb" }, { exercise_key: PULLUP, unit: "reps" }],
+  ledger: ledgerOf([monSession(0, 200, 8), monSession(1, 200, 8), monSession(2, 200, 8), freestyleSession(mondays[0], PULLUP, 3, 0, 6)], plan3, mondays[2], skipped),
+  data,
+});
+check("lift rows: tracking, not logged, calibrating", rows[0].state === "tracking" && rows[1].state === "not-logged" && rows[2].state === "calibrating", rows.map((r) => r.state).join());
+check("lift rows: current, start and target are whole numbers", rows[0].current === 253 && rows[0].start === 253 && rows[0].target === 290 + 5 && rows[0].delta === 0, JSON.stringify([rows[0].current, rows[0].start, rows[0].target]));
+
+const weeks = Rana.progress.weeklyXp(ledger, END, 5);
+check("weekly XP: five weeks, the last ends at the current level", weeks.length === 5 && weeks[4].level === Rana.game.levelForXp(ledger.totalXp));
+check("weekly XP: a level reached is named only in the week it happened", weeks.every((w) => w.levelReached === null || w.levelReached === w.level));
+
+const lastParts = [monSession(0, 100, 8), monSession(1, 110, 8)];
+const lastSource = { sets: lastParts.flatMap((p) => p.sets), sessions: lastParts.map((p) => p.session) };
+check("last time: the previous session's sets, newest first", Rana.progress.lastTime(K, lastSource).length === 3 && Rana.progress.lastTime(K, lastSource)[0].weight === 110);
+check("last time: leaves out the workout in progress", Rana.progress.lastTime(K, lastSource, lastParts[1].session.session_id)[0].weight === 100 && Rana.progress.lastTime("front_squat", lastSource).length === 0);
+check("set formatting", Rana.progress.formatSet({ weight: 135, reps: 8 }) === "135 × 8" && Rana.progress.formatSet({ weight: 0, reps: 8 }) === "8 reps");
 
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

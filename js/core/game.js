@@ -1,5 +1,5 @@
-// The game layer: XP, levels, tiers, earned titles, stats, calorie/macro
-// display, recovery.
+// The game layer: XP, levels, tiers, earned titles, lift targets, and the
+// calorie/macro display.
 //
 // The leveling rules below (XP sources, level curve, tiers, titles) were
 // designed with the fitness expert on 2026-11-25 and are written up in full
@@ -7,8 +7,8 @@
 // once real people use the app — they all live in XP_RULES so they're easy
 // to find and change in one place.
 //
-// Design note: nothing about "current XP", "current level" or "current
-// stats" is ever stored. Every time the app needs them, it replays the full
+// Design note: nothing about "current XP", "current level", a lift's best or
+// a lift's target is ever stored. Every time the app needs them, it replays the full
 // history of logged sets (Rana.storage.getAllLoggedSets()) from scratch.
 // That's what makes "levels and stats never go down" true by construction:
 // the history only ever grows, so there's nothing for a later bug to
@@ -46,9 +46,19 @@ Rana.game = (() => {
     // streak. Below it, nothing — one set of curls isn't a workout.
     FREESTYLE_MIN_SETS: 3,
 
-    // A strength gain this big (in %) gets the big "NEW RECORD" moment on the
-    // summary screen. Smaller gains still earn their XP, just with a quieter pop.
-    NEW_RECORD_PERCENT: 5,
+    // Lift targets (redesign, 2026-11-28). Each main lift has a goal: its
+    // estimated max plus a percentage, rounded UP to the next 5 lb (or a whole
+    // rep for bodyweight lifts). Reaching it earns this one-time bonus, and a
+    // new target appears. The % depends on the fitness level from the
+    // questionnaire; starting guesses, the fitness expert's call.
+    TARGET_HIT_XP: 500,
+    TARGET_ROUND_LB: 5,
+    TARGET_PERCENT: {
+      "never-trained": 0.25,
+      "returning": 0.15,
+      "consistently": 0.08,
+      default: 0.15, // no questionnaire answer available
+    },
   };
 
   // ---------------------------------------------------------------------
@@ -140,6 +150,88 @@ Rana.game = (() => {
   }
 
   // ---------------------------------------------------------------------
+  // Lift records and targets
+  // ---------------------------------------------------------------------
+  // One record per exercise and mode, built while the ledger replays the
+  // history (never stored):
+  //   sessions   finished sessions that scored this exercise
+  //   best       all-time best score (estimated max in lb, or reps)
+  //   history    each session's best score: [{ date, session_id, score }]
+  //   start      where the lift started: the questionnaire answer, else the
+  //              best after calibration (null until one of those exists)
+  //   target     { value, set_on, source: "answer" | "calibration" | "hit" } or null
+  //   hits       targets reached: [{ date, session_id, value }]
+  function newLiftRecord(exerciseKey, mode) {
+    return {
+      exerciseKey, mode, unit: mode === "bodyweight" ? "reps" : "lb",
+      sessions: 0, best: 0, history: [], start: null, target: null, hits: [],
+    };
+  }
+
+  function targetPercent(profile) {
+    const table = XP_RULES.TARGET_PERCENT;
+    return (profile && table[profile.fitness_level]) ?? table.default;
+  }
+
+  // The next target for a lift whose current score is `value`: the score plus
+  // the level's percentage, rounded UP to the next 5 lb (weighted) or to a
+  // whole rep, at least one more rep (bodyweight).
+  function nextTarget(value, unit, profile) {
+    const grown = value * (1 + targetPercent(profile));
+    if (unit === "reps") return Math.max(Math.ceil(grown - 1e-9), Math.ceil(value) + 1);
+    return Math.ceil(grown / XP_RULES.TARGET_ROUND_LB - 1e-9) * XP_RULES.TARGET_ROUND_LB;
+  }
+
+  // The questionnaire's "recent set" answers give each lift its first target.
+  // Answers never become a personal best (record.best stays 0), so a made-up
+  // number can't block real strength XP. { weight, reps } with weight 0 is a
+  // bodyweight lift; { skipped: true } or no answer seeds nothing.
+  function seedStartingLifts(profile, tracked, records, lifts) {
+    const answers = (profile && profile.starting_lifts) || {};
+    const created = profile && profile.created_at ? String(profile.created_at).slice(0, 10) : null;
+    for (const [exerciseKey, answer] of Object.entries(answers)) {
+      if (!tracked.has(exerciseKey)) continue;
+      const reps = Number(answer && answer.reps);
+      const weight = Number(answer && answer.weight) || 0;
+      if (!(reps >= 1)) continue;
+      const mode = weight > 0 ? "weighted" : "bodyweight";
+      const record = newLiftRecord(exerciseKey, mode);
+      record.start = mode === "weighted" ? estimatedOneRepMax(weight, reps) : reps;
+      record.target = { value: nextTarget(record.start, record.unit, profile), set_on: created, source: "answer" };
+      records.set(`${exerciseKey}:${mode}`, record);
+      lifts.set(exerciseKey, record);
+    }
+  }
+
+  // Called after a session's score for a lift has been added to its record.
+  function updateTarget(record, score, date, sessionId, profile, sessionEntry) {
+    const calibration = XP_RULES.CALIBRATION_SESSIONS;
+    if (record.sessions < calibration) return; // still calibrating: no bonus yet
+
+    if (record.sessions === calibration) {
+      // Calibration just ended: no target yet (answer skipped), or the answer
+      // was too low (the lift already beats its target). Start from the logged numbers.
+      if (!record.target || record.best >= record.target.value) {
+        record.target = { value: nextTarget(record.best, record.unit, profile), set_on: date, source: "calibration" };
+        record.start = record.best;
+      }
+      return;
+    }
+
+    if (record.target && score >= record.target.value) {
+      const hit = {
+        exerciseKey: record.exerciseKey, mode: record.mode, unit: record.unit,
+        value: record.target.value, next: nextTarget(score, record.unit, profile),
+        xp: XP_RULES.TARGET_HIT_XP, sessionId,
+      };
+      record.hits.push({ date, session_id: sessionId, value: hit.value });
+      record.target = { value: hit.next, set_on: date, source: "hit" };
+      sessionEntry.targetHits.push(hit);
+      sessionEntry.targetXp += hit.xp;
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // The XP ledger: replays the whole history, one calendar day at a time
   // ---------------------------------------------------------------------
   //
@@ -163,10 +255,31 @@ Rana.game = (() => {
   // freestyle: every exercise keeps one record (by exercise_key), so getting
   // stronger always counts, wherever it happened.
   //
-  // Returns the total XP plus a per-date breakdown (`entries`) and a
-  // per-session strength breakdown (`sessionEntries`) — that's what lets the
-  // summary screen say exactly where a session's XP came from.
-  function computeXpLedger(finishedSets, finishedSessions, plan, data, todayStr) {
+  // Lift targets (the third XP source): every MAIN lift has a target; the
+  // first set that reaches it earns TARGET_HIT_XP once and a new target
+  // appears. Rules, in order:
+  //   - No bonus during a lift's first CALIBRATION_SESSIONS sessions.
+  //   - When the last calibration session ends, a lift with no target (the
+  //     questionnaire answer was skipped), or whose logged best already
+  //     beats the target (the answer was too low), gets its target from the
+  //     logged numbers instead.
+  //   - Afterwards, a session whose best reaches the target earns the bonus;
+  //     the next target is that session's best plus the same percentage.
+  // The questionnaire's answers only set the first target. They are never a
+  // personal best for the strength-increase XP above.
+  //
+  // Returns the total XP plus a per-date breakdown (`entries`), a per-session
+  // breakdown (`sessionEntries`: strength increases and target hits, which is
+  // what lets the summary screen say exactly where a session's XP came from),
+  // and `lifts`: for every exercise, its calibration count, best, history,
+  // start, target and hits (the Progress screen reads this).
+  //
+  // Takes one options object:
+  //   sets, sessions   FINISHED sets and sessions
+  //   plan, data       the active plan and the exercise library
+  //   profile          optional; supplies fitness_level and starting_lifts
+  //   today            optional "YYYY-MM-DD" (tests pass it)
+  function computeXpLedger({ sets: finishedSets, sessions: finishedSessions, plan, data, profile = null, today: todayStr }) {
     const today = todayStr || Rana.plan.todayStr();
 
     const setsBySession = new Map();
@@ -187,15 +300,21 @@ Rana.game = (() => {
     const ledger = {
       totalXp: 0,
       entries: new Map(), // date → breakdown for that day
-      sessionEntries: new Map(), // session_id → { increases, strengthXp }
+      sessionEntries: new Map(), // session_id → { increases, strengthXp, targetHits, targetXp }
+      lifts: new Map(), // exercise_key → its record (latest mode), see newLiftRecord
       currentStreak: 0,
       longestStreak: 0,
       sessionsCompleted: 0, // sessions that earned session XP (planned or not)
       strengthIncreaseCount: 0,
     };
 
-    // Per-exercise records: how many sessions logged, and the best score.
+    // Per-exercise records, one per exercise AND mode (weighted or bodyweight),
+    // so adding a dip belt starts a fresh baseline. `ledger.lifts` points at
+    // each exercise's most recent record.
     const records = new Map();
+    // Only main lifts (see Rana.plan.targetLiftKeys) have targets and bonuses.
+    const tracked = Rana.plan.targetLiftKeys(data);
+    seedStartingLifts(profile, tracked, records, ledger.lifts);
 
     // Start at the plan's start date, or earlier if somehow there are
     // sessions from before it — never silently drop real work.
@@ -221,6 +340,8 @@ Rana.game = (() => {
         streakMultiplier: 1,
         increases: [],
         strengthXp: 0,
+        targetHits: [],
+        targetXp: 0,
         totalXp: 0,
       };
 
@@ -286,7 +407,7 @@ Rana.game = (() => {
 
       // --- Strength increases: scored per session, in the order they happened ---
       for (const session of daySessions) {
-        const sessionEntry = { increases: [], strengthXp: 0 };
+        const sessionEntry = { increases: [], strengthXp: 0, targetHits: [], targetXp: 0 };
 
         const setsByExercise = new Map();
         for (const set of setsBySession.get(session.session_id) || []) {
@@ -299,7 +420,7 @@ Rana.game = (() => {
           if (!result) return;
 
           const recordKey = `${exerciseKey}:${result.mode}`;
-          const record = records.get(recordKey) || { sessions: 0, best: 0 };
+          const record = records.get(recordKey) || newLiftRecord(exerciseKey, result.mode);
 
           const pastCalibration = record.sessions >= XP_RULES.CALIBRATION_SESSIONS;
           if (pastCalibration && record.best > 0 && result.score > record.best) {
@@ -317,15 +438,20 @@ Rana.game = (() => {
 
           record.best = Math.max(record.best, result.score);
           record.sessions += 1;
+          record.history.push({ date: dateStr, session_id: session.session_id, score: result.score });
           records.set(recordKey, record);
+          ledger.lifts.set(exerciseKey, record);
+          if (tracked.has(exerciseKey)) updateTarget(record, result.score, dateStr, session.session_id, profile, sessionEntry);
         });
 
         ledger.sessionEntries.set(session.session_id, sessionEntry);
         entry.increases.push(...sessionEntry.increases);
         entry.strengthXp += sessionEntry.strengthXp;
+        entry.targetHits.push(...sessionEntry.targetHits);
+        entry.targetXp += sessionEntry.targetXp;
       }
 
-      entry.totalXp = entry.sessionXp + entry.streakBonusXp + entry.strengthXp;
+      entry.totalXp = entry.sessionXp + entry.streakBonusXp + entry.strengthXp + entry.targetXp;
       ledger.totalXp += entry.totalXp;
       ledger.entries.set(dateStr, entry);
 
@@ -336,14 +462,14 @@ Rana.game = (() => {
     return ledger;
   }
 
-  // How much XP one session earned: its own strength increases, plus the
-  // day's session XP and streak boost if this was the workout that earned
-  // them. Summed over every session, this equals ledger.totalXp exactly
-  // (scripts/test_leveling.js checks that).
+  // How much XP one session earned: its own strength increases and target
+  // hits, plus the day's session XP and streak boost if this was the workout
+  // that earned them. Summed over every session, this equals ledger.totalXp
+  // exactly (scripts/test_leveling.js checks that).
   function xpForSession(ledger, session) {
     const sessionEntry = ledger.sessionEntries.get(session.session_id);
     const entry = ledger.entries.get(session.date);
-    let xp = sessionEntry ? sessionEntry.strengthXp : 0;
+    let xp = sessionEntry ? sessionEntry.strengthXp + sessionEntry.targetXp : 0;
     if (entry && entry.xpSessionId === session.session_id) xp += entry.sessionXp + entry.streakBonusXp;
     return xp;
   }
@@ -367,44 +493,6 @@ Rana.game = (() => {
   function currentTitle(ledger) {
     const earned = earnedTitles(ledger);
     return earned.length ? earned[earned.length - 1] : null;
-  }
-
-  // ---------------------------------------------------------------------
-  // Stats (STR / AGI / VIT)
-  // ---------------------------------------------------------------------
-  // Everyone starts at 0 — the app can't know how strong you are before
-  // you've trained, so it doesn't guess. Stats are only earned from logged
-  // work. They grow with the square root of points, so early gains are
-  // quick and visible and later ones take longer.
-  function statValue(points) {
-    return Math.floor(4 * Math.sqrt(points));
-  }
-
-  // Stat points earned from real logged sets (pass FINISHED sets only).
-  // There is no Intelligence stat (removed 2026-11-27): following the plan
-  // is rewarded through the streak boost in XP instead.
-  function computeStatPoints(loggedSets, exerciseByKey) {
-    const points = { STR: 0, AGI: 0, VIT: 0 };
-
-    for (const set of loggedSets) {
-      const ex = exerciseByKey.get(set.exercise_key);
-      if (!ex) continue;
-
-      points.VIT += 1; // every completed set counts toward work capacity
-      if (["Hip Hinge", "Hip Extension", "Trunk Flexion", "Anti-Extension"].includes(ex.movement_pattern)) {
-        points.VIT += 0.5; // posterior-chain / core bonus
-      }
-
-      const topsOutAt8OrBelow = /^\s*(\d+)/.test(set.rep_range || "") &&
-        Math.max(...(set.rep_range || "").split("-").map(Number)) <= 8;
-      if (ex.is_compound && topsOutAt8OrBelow) points.STR += 1.5;
-
-      if (ex.is_unilateral) points.AGI += 1;
-      const repsNum = Number(set.reps) || 0;
-      if (repsNum >= 12) points.AGI += 1;
-    }
-
-    return points;
   }
 
   // ---------------------------------------------------------------------
@@ -464,30 +552,6 @@ Rana.game = (() => {
     };
   }
 
-  // Projected stats after 12 weeks of following the assigned plan, starting
-  // from 0. Estimates points from training_days_per_week × 12 weeks of
-  // "average" sessions. A forecast conditional on showing up — the UI must
-  // label it as one (PRD section 7.5), never as a guarantee.
-  function computeProjectedStats(profile) {
-    const sessionsOver12Weeks = Number(profile.training_days_per_week) * 12;
-    // Program workouts are written by hand in the workbook (4-7 exercises,
-    // at most 3 sets each, scripts/library_rules.py). Across the 25 workout
-    // days the average is 15.8 working sets per session (2026-11-26), so 16.
-    const avgSetsPerSession = 16;
-
-    const points = {
-      STR: sessionsOver12Weeks * avgSetsPerSession * 0.35,
-      AGI: sessionsOver12Weeks * avgSetsPerSession * 0.25,
-      VIT: sessionsOver12Weeks * avgSetsPerSession * 1.0,
-    };
-
-    return {
-      STR: statValue(points.STR),
-      AGI: statValue(points.AGI),
-      VIT: statValue(points.VIT),
-    };
-  }
-
   // --- Calorie / macro targets (display-only, PRD D4 + safety guardrails section 11) ---
   function computeCalorieTargets(profile) {
     const weightKg = Number(profile.weight_current) * 0.453592;
@@ -540,27 +604,6 @@ Rana.game = (() => {
     return { calories: target, proteinG, carbsG, fatG, waterCups: 10 };
   }
 
-  // --- Recovery: only ever computed from real data, `—` otherwise (PRD section 7.4) ---
-  function computeRecovery(allLoggedSets, plan, sessionFeedbackByDate) {
-    if (!allLoggedSets || allLoggedSets.length === 0) return null;
-
-    const dates = [...new Set(allLoggedSets.map((s) => s.date))].sort();
-    const lastDate = dates[dates.length - 1];
-    const daysSinceLast = Math.round(
-      (new Date() - new Date(lastDate + "T00:00:00")) / (1000 * 60 * 60 * 24)
-    );
-
-    const feedbackValues = Object.values(sessionFeedbackByDate || {});
-    const avgDifficulty = feedbackValues.length
-      ? feedbackValues.reduce((a, b) => a + b, 0) / feedbackValues.length
-      : 3;
-
-    // Simple 0-100 blend: more days rested nudges recovery up, recent hard
-    // sessions nudge it down. First-pass formula, not from the PRD.
-    let score = 70 + daysSinceLast * 8 - (avgDifficulty - 3) * 8;
-    return Math.max(0, Math.min(100, Math.round(score)));
-  }
-
   return {
     XP_RULES,
     TIERS,
@@ -573,11 +616,8 @@ Rana.game = (() => {
     xpForSession,
     earnedTitles,
     currentTitle,
-    statValue,
-    computeStatPoints,
-    computeProjectedStats,
     forecastRoute,
     computeCalorieTargets,
-    computeRecovery,
+    nextTarget,
   };
 })();

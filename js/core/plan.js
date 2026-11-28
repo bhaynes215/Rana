@@ -372,6 +372,61 @@ Rana.plan = (() => {
     });
   }
 
+  // --- Main lifts: the lifts Progress tracks and the questionnaire asks about ---
+  // The first exercise of each workout day in Rana's plan, in the order the
+  // days fall in the week, each exercise counted once. "First exercise" means
+  // what the suggested workout actually uses for slot 1, so a user with a
+  // shoulder limitation is asked about (and tracked on) the substitute, not
+  // an exercise they will never do.
+  //
+  // `planDef` is anything with a weekday_map ({ Mon: "UL_UPPER_A", ... }):
+  // the saved Rana plan, or a plan about to be created during the questionnaire.
+  // Returns [{ exercise_key, workout_id, unit }], where unit is "reps" for
+  // bodyweight exercises (pull-ups) and "lb" for everything else.
+  function mainLifts(planDef, data, profile) {
+    const limitations = activeLimitations(profile);
+    const seen = new Set();
+    const lifts = [];
+    for (const weekday of WEEKDAY_ORDER) {
+      const workoutId = planDef && planDef.weekday_map && planDef.weekday_map[weekday];
+      if (!workoutId || workoutId === OWN_WORKOUT) continue;
+      const slots = data.slotsByWorkout.get(workoutId);
+      if (!slots || !slots.length) continue;
+      const first = suggestWorkout(slots, data, limitations)[0];
+      if (!first || !first.exerciseKey || seen.has(first.exerciseKey)) continue;
+      seen.add(first.exerciseKey);
+      const exercise = data.exerciseByKey.get(first.exerciseKey);
+      lifts.push({
+        exercise_key: first.exerciseKey,
+        workout_id: workoutId,
+        unit: exercise && exercise.equipment === "Bodyweight" ? "reps" : "lb",
+      });
+    }
+    return lifts;
+  }
+
+  // The exercises that can have a lift target (and pay the target bonus): any
+  // exercise offered for the FIRST slot of any workout day in the library.
+  // Using the whole library, not the user's current plan, keeps XP stable: if
+  // someone later changes their goal and gets a different split, nothing they
+  // already earned appears or disappears. It also covers a limitation swap
+  // (a shoulder-friendly press in place of the barbell one), since that is
+  // still an option of the same slot. Accessories (curls, raises, abs) never
+  // have targets.
+  const targetLiftCache = new WeakMap();
+
+  function targetLiftKeys(data) {
+    let keys = targetLiftCache.get(data);
+    if (!keys) {
+      keys = new Set();
+      data.slotsByWorkout.forEach((slots) => {
+        (data.optionsBySlot.get(slots[0].slot_id) || []).forEach((option) => keys.add(option.exercise_key));
+      });
+      targetLiftCache.set(data, keys);
+    }
+    return keys;
+  }
+
   // --- Abs: an optional section at the end of every suggested workout ---
   // No program day assigns core work; instead every suggested workout ends
   // with the core exercises to choose from (decision 2026-11-26). Exercises
@@ -428,6 +483,8 @@ Rana.plan = (() => {
     activeLimitations,
     pickSuggestedOption,
     suggestWorkout,
+    mainLifts,
+    targetLiftKeys,
     swapText,
     cautionText,
     sessionTitle,

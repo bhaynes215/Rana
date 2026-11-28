@@ -45,7 +45,7 @@ Rana.page = (() => {
       },
       // Everything about XP is replayed from the saved sets, never stored.
       ledger() {
-        return (ledger ||= Rana.game.computeXpLedger(this.sets, this.sessions, plan, data));
+        return (ledger ||= Rana.game.computeXpLedger({ sets: this.sets, sessions: this.sessions, plan, data, profile }));
       },
     };
   }

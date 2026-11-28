@@ -215,6 +215,13 @@ ledger.lifts[exercise_key] = {
 
 **`computeXpLedger` needs `profile`** for these rules. Add it to the signature (`computeXpLedger({ sets, sessions, plan, data, profile, today })`, one options object) and update every caller. There are few once pages go through `ctx.ledger()`.
 
+**As built in Phase 2 (read this before using the ledger):**
+- `ledger.lifts` is a **Map** (`exercise_key` → record). The record has `exerciseKey, mode, unit, sessions, best, history: [{ date, session_id, score }], start, target, hits`. `calibrated` is not stored: use `sessions >= XP_RULES.CALIBRATION_SESSIONS`. It points at an exercise's most recent mode (weighted or bodyweight).
+- **Targets and the bonus apply only to "main lift" exercises**: `Rana.plan.targetLiftKeys(data)`, which is every exercise offered for the FIRST slot of ANY workout day in the library. It is library-wide on purpose, not the user's current plan, so changing goal or split later never adds or removes XP already earned (levels must never go down). It also covers limitation swaps (still options of the same slot). Curls, raises and abs never have targets. Progress rows show only the user's own plan's main lifts (`Rana.plan.mainLifts`), a subset of that set.
+- `sessionEntries.get(id)` and each `entries` day have `targetHits: [{ exerciseKey, mode, unit, value, next, xp, sessionId }]` and `targetXp`; `xpForSession` includes it. `Rana.game.nextTarget(value, unit, profile)` is exported.
+- Starting-lift answers seed targets only for tracked keys, and never set `best` (so they never count as a personal best).
+- Simulation result: 14 hits = 7,000 XP over 3 years; Level 50 lands at about week 150 (it was not reached by week 156 without the bonus).
+
 ### 5.2 `plan.js` additions
 
 - **`mainLifts(planDef, data, profile)`:** for each workout day of Rana's plan in schedule order, take slot 1 and the limitation-aware pick (`pickSuggestedOption`), dedupe by `exercise_key`, and return `[{ exercise_key, workout_id, unit }]`. Used by the lifts question, Progress and Profile.
