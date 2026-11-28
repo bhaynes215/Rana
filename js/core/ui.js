@@ -112,6 +112,7 @@ Rana.ui = (() => {
     const root = document.documentElement;
     if (direction) root.dataset.vt = direction;
     const t = document.startViewTransition(update);
+    t.ready.catch(() => {}); // a skipped transition is not an error
     return t.finished.catch(() => {}).finally(() => {
       delete root.dataset.vt;
     });

@@ -447,6 +447,15 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 
 **Check:** vs `04-plan-reveal.png`; lock-in works for Rana's plan and for an own plan; the calorie numbers match the old screen for the Phase 0 fixture.
 
+**As built (Phase 4):**
+- Files: `plan-reveal.html` + `js/pages/plan-reveal.js` + `css/pages/plan-reveal.css`; `sign-up.html` + `js/pages/sign-up.js` + `css/pages/sign-up.css`; `index.html` (the one page with plain, non-deferred scripts).
+- New plan helpers (tested, section 12 of `scripts/test_leveling.js`): `Rana.plan.dayTitle`, `shortSplitName`, `dayLabelLines`, `weekDays` (the Plan tab in Phase 9 reuses `weekDays` and `weekStrip`). Every workout label fits the week strip (7 characters a line); "Shoulders" is shortened to "Delts".
+- "Start my plan" never restarts a plan that is already active (it keeps its start date).
+- **Every page's `<head>` now loads `js/core/transitions.js`** (a plain, non-deferred script). It handles the promises of skipped page transitions so the console stays clean. Use it on every page from now on, after the stylesheets.
+- Cross-document view transitions were confirmed working in Chrome (`pagereveal` reported a transition on a link click) once the preview pane was visible.
+- The calorie numbers are unchanged (same function): the fixture shows 2,765 kcal.
+- The route's phase track and legend are page-level (only this screen uses them).
+
 ### Phase 5: Today (`today.html`)
 **Delete:**
 - `dashboard.html/.js`, `session-detail.html/.js` (D1) and every link to `session-detail.html`;

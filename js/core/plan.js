@@ -372,6 +372,42 @@ Rana.plan = (() => {
     });
   }
 
+  // --- Names for screens ---
+  // "Push Day A (Chest Focus)" -> "Push Day A": the part in brackets is a
+  // description, too long for a title or a sentence.
+  function dayTitle(dayName) {
+    return String(dayName || "").replace(/\s*\(.*\)\s*$/, "").trim();
+  }
+
+  // "Upper / Lower (3-6 Day)" -> "Upper / Lower": the bracket repeats the day
+  // count, which the week already shows.
+  function shortSplitName(split) {
+    return split ? split.split_name.split(" (")[0] : "Rana's plan";
+  }
+
+  // A day's name as two short lines for the week strip's narrow blocks
+  // ("Upper A" -> ["Upper", "A"], "Full Body A" -> ["Full", "Body A"]).
+  // A few long words are shortened so they fit.
+  const SHORT_WORD = { Shoulders: "Delts" };
+  function dayLabelLines(dayName) {
+    const words = dayTitle(dayName).split(/\s+/).filter((w) => w && w !== "Day").map((w) => SHORT_WORD[w] || w);
+    if (words.length <= 1) return [words[0] || "Workout"];
+    if (words.length === 2 && /^[A-C]$/.test(words[1])) return words; // "Upper", "A"
+    return [words[0], words.slice(1).join(" ")];
+  }
+
+  // The week as seven entries, Monday first: [{ weekday: "Mon", workout, ownName, lines }].
+  // `lines` is the day's name for the week strip, or null on a rest day.
+  // Own-plan days have no library workout, just the name the user gave them.
+  function weekDays(weekdayMap, data, ownDayNames = {}) {
+    return WEEKDAY_ORDER.map((weekday) => {
+      const id = weekdayMap && weekdayMap[weekday];
+      if (id === OWN_WORKOUT) return { weekday, workout: null, ownName: ownDayNames[weekday] || "Workout", lines: dayLabelLines(ownDayNames[weekday] || "Workout") };
+      const workout = id ? data.workoutById.get(id) || null : null;
+      return { weekday, workout, ownName: null, lines: workout ? dayLabelLines(workout.day_name) : null };
+    });
+  }
+
   // --- Main lifts: the lifts Progress tracks and the questionnaire asks about ---
   // The first exercise of each workout day in Rana's plan, in the order the
   // days fall in the week, each exercise counted once. "First exercise" means
@@ -485,6 +521,10 @@ Rana.plan = (() => {
     suggestWorkout,
     mainLifts,
     targetLiftKeys,
+    dayTitle,
+    shortSplitName,
+    dayLabelLines,
+    weekDays,
     swapText,
     cautionText,
     sessionTitle,

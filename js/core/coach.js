@@ -98,9 +98,8 @@ Rana.coach = (() => {
   const trim = (n) => String(Number(Number(n).toFixed(1)));
   const roundTo5 = (n) => Math.round(n / 5) * 5;
 
-  // "Push Day A (Chest Focus)" -> "Push Day A": the part in brackets is a
-  // description, too long for a sentence.
-  const shortWorkoutName = (name) => String(name || "workout").replace(/\s*\(.*\)\s*$/, "");
+  // "Push Day A (Chest Focus)" -> "Push Day A" (see Rana.plan.dayTitle).
+  const shortWorkoutName = (name) => Rana.plan.dayTitle(name) || "workout";
 
   // ---------------------------------------------------------------------
   // The progression rule

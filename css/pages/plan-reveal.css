@@ -1,0 +1,24 @@
+/* Plan reveal: the layout around the shared components. */
+
+.reveal { display: flex; flex-direction: column; gap: var(--space-5); }
+
+/* The plan's name and its one-line summary, under Rana's bubble. */
+.reveal-title { display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Quiet headings for the sections below the fold. */
+.reveal-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); }
+.reveal-heading { font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: 700; color: var(--color-ink-muted); }
+
+/* The 12-week route: one slim cell per week, colored by phase. Which phase is
+   which is written out in the list under it, so color is never the only signal. */
+.route-track { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; }
+.route-track > span { height: 8px; border-radius: var(--radius-full); }
+.route-track__week--calibration { background: var(--color-accent-soft); }
+.route-track__week--build { background: var(--color-accent); }
+.route-track__week--deload { background: var(--color-radio); }
+
+.reveal-note { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); text-wrap: pretty; }
+
+/* The week and the cards fade in once, a beat after Rana's bubble. */
+.reveal-in { animation: reveal-in var(--dur-base) var(--ease-out) both; animation-delay: calc(120ms + var(--i, 0) * 70ms); }
+@keyframes reveal-in { from { opacity: 0; transform: translateY(8px); } }

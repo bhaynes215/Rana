@@ -10,7 +10,7 @@
 const QUICK_NAMES = ["Push", "Pull", "Legs", "Upper", "Lower", "Full Body", "Chest", "Back", "Shoulders", "Arms"];
 
 const params = new URLSearchParams(window.location.search);
-const returnTo = params.get("from") === "results" ? "results.html" : "my-plan.html";
+const returnTo = params.get("from") === "results" ? "plan-reveal.html" : "my-plan.html";
 
 // The week being edited: { Mon: { training: true, name: "Push" }, ... }
 const week = {};

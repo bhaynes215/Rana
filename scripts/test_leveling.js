@@ -584,5 +584,17 @@ const qProfile = Q.toProfile({ name: " Brennan ", age: "21", height: "178", weig
 check("answers become a profile: numbers, no 'none' limitation, a trimmed name, no empty target", qProfile.name === "Brennan" && qProfile.age === 21 && qProfile.weight_target === null && qProfile.limitations.length === 0 && qProfile.starting_lifts.bench.skipped === true && Boolean(qProfile.created_at));
 check("lift names read well in a sentence", Q.liftName({ exercise_name: "Barbell Incline Bench Press" }) === "incline bench press" && Q.liftName({ exercise_name: "Leg Press" }) === "leg press" && Q.liftLabel({ exercise_name: "Barbell Back Squat" }) === "Back squat");
 
+// ---------- 12. Names and the week for the plan reveal ----------
+console.log("");
+const P = Rana.plan;
+const lines = (n) => P.dayLabelLines(n).join("|");
+check("day names become short week-strip labels", lines("Upper A (Strength Emphasis)") === "Upper|A" && lines("Push Day A (Chest Focus)") === "Push|A" && lines("Full Body A (Squat + Press Emphasis)") === "Full|Body A" && lines("Legs") === "Legs" && lines("Chest + Back") === "Chest|+ Back" && lines("Shoulders + Arms") === "Delts|+ Arms", ["Upper A (Strength Emphasis)", "Push Day A (Chest Focus)", "Full Body A (Squat + Press Emphasis)", "Chest + Back", "Shoulders + Arms"].map(lines).join("  "));
+check("no workout label has a line too long for the strip (7 characters)", [...data.workoutById.values()].every((w) => P.dayLabelLines(w.day_name).every((l) => l.length <= 7)), [...data.workoutById.values()].filter((w) => P.dayLabelLines(w.day_name).some((l) => l.length > 7)).map((w) => w.day_name).join("; "));
+check("titles drop the bracketed description; split names drop the day count", P.dayTitle("Push Day A (Chest Focus)") === "Push Day A" && P.dayTitle("Legs") === "Legs" && P.shortSplitName({ split_name: "Upper / Lower (3-6 Day)" }) === "Upper / Lower" && P.shortSplitName(null) === "Rana's plan");
+const weekFor = P.weekDays(plan4.weekday_map, data);
+check("the week has seven entries, Monday first, with rest days empty", weekFor.length === 7 && weekFor[0].weekday === "Mon" && weekFor[0].lines.join() === "Upper,A" && weekFor[2].lines === null && weekFor[2].workout === null);
+const ownWeek = P.weekDays({ Mon: null, Tue: OWN, Wed: null }, data, { Tue: "Push" });
+check("an own-plan day shows the name the user gave it", ownWeek[1].lines.join() === "Push" && ownWeek[1].ownName === "Push" && ownWeek[1].workout === null && ownWeek[0].lines === null);
+
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);
