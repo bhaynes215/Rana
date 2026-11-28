@@ -664,5 +664,21 @@ const shortSummary = summarize(shortFree.session, [shortFree], plan3, mondays[0]
 check("a freestyle workout under 3 sets says how many it needs", shortSummary.lines.length === 0 && shortSummary.notes[0].includes("at least 3 sets"));
 check("the summary line follows the summary: a target hit wins", Rana.coach.summaryLine({ data, targetHits: hitSummary.targetHits, levelBefore: hitSummary.levelBefore, levelAfter: hitSummary.levelAfter, increases: hitSummary.increases, sets: 18, minutes: 50, restDay: false }).kind === "target");
 
+// ---------- 15. Changing the goal or training days (Profile) ----------
+console.log("");
+store.clear();
+const ULgoal = { goal: "get-stronger", training_days_per_week: 4, training_weekdays: ["Mon", "Tue", "Thu", "Fri"] };
+Rana.storage.saveProfile(ULgoal);
+Rana.storage.savePlan({ ...plan4, active_plan_id: "rana", status: "active" });
+const same = Rana.plan.previewPlanChange(ULgoal, data);
+check("the same answers change nothing", same.unchanged === true && same.splitId === "SPLIT_UL");
+const toMuscle = Rana.plan.previewPlanChange({ ...ULgoal, goal: "build-muscle" }, data);
+check("a new goal previews the new split and says what happens", toMuscle.unchanged === false && toMuscle.splitId === "SPLIT_AESTHETIC" && toMuscle.message.startsWith("Rana's plan becomes Aesthetics Split on 4 days"), toMuscle.message);
+check("it also says when Rana's plan isn't the active one", (() => { Rana.storage.savePlan({ ...plan4, active_plan_id: "own", status: "active" }); const m = Rana.plan.previewPlanChange({ ...ULgoal, goal: "build-muscle" }, data).message; Rana.storage.savePlan({ ...plan4, active_plan_id: "rana", status: "active" }); return m.endsWith("Your own plan stays active."); })());
+Rana.plan.applyPlanChange(toMuscle);
+const afterChange = Rana.storage.getPlan();
+check("applying it updates Rana's saved plan and the active schedule, keeping the old week in the history", afterChange.split_id === "SPLIT_AESTHETIC" && Rana.storage.getSavedPlans().rana.split_id === "SPLIT_AESTHETIC" && afterChange.schedule_history.length >= 1);
+store.clear();
+
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

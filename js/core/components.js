@@ -512,6 +512,32 @@
     }));
   }
 
+  // A list card whose rows open to show more (the Plan tab's days).
+  //   rows: [{ title, subtitle, value, detail: () => Node | null }]
+  // A row with a `detail` is a button; its detail is built the first time it opens.
+  function expandableList(rows) {
+    return el("ul", "card card--list", rows.map((row) => {
+      const chevron = icon("down", 20);
+      chevron.classList.add("expand__chevron");
+      const text = el("span", "list-row__text", [el("span", "list-row__title", row.title), row.subtitle && el("span", "list-row__sub", row.subtitle)]);
+      const value = row.value && el("span", "list-row__value num", row.value);
+      const head = row.detail
+        ? el("button", "list-row expand__head", [text, value, chevron], { type: "button", "aria-expanded": "false" })
+        : el("div", "list-row expand__head", [text, value]);
+      const item = el("li", "expand", head);
+      let body = null;
+      if (row.detail) {
+        head.addEventListener("click", () => {
+          const opening = head.getAttribute("aria-expanded") !== "true";
+          head.setAttribute("aria-expanded", String(opening));
+          if (!body) { body = el("div", "expand__body", row.detail()); item.append(body); }
+          body.hidden = !opening;
+        });
+      }
+      return item;
+    }));
+  }
+
   // Rana, one line, one action (nothing logged yet, a load error...).
   function emptyState({ pose = "wave", text, actionLabel, onAction, href }) {
     return el("div", "empty", [
@@ -533,6 +559,6 @@
     optionGroup, chipGroup, stepChips,
     collapsible, videoSlot, muscleChips,
     field, doneToggle, setRow, setTable,
-    weekStrip, weekRow, listCard, emptyState, footerBar,
+    weekStrip, weekRow, listCard, expandableList, emptyState, footerBar,
   });
 })();

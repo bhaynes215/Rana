@@ -132,6 +132,38 @@ Rana.plan = (() => {
     return { plan, effectiveFrom: null };
   }
 
+  // --- Changing the goal or the training days (Profile) ---
+  // These pick Rana's split (matchSplit) and lay it on the chosen weekdays.
+  // previewPlanChange works out what Rana's plan WOULD become, so the screen
+  // can ask first; applyPlanChange then saves it. The user's own plan is never
+  // touched. If Rana's plan is the active one the change goes through
+  // activatePlan, so past days keep the week they had (XP never changes).
+  // Returns { splitId, weekdays, weekdayMap, unchanged, ranaActive, message } or { error }.
+  function previewPlanChange(newProfile, data) {
+    const plan = Rana.storage.getPlan();
+    const saved = Rana.storage.getSavedPlans();
+    const splitId = matchSplit(newProfile, data.splits);
+    if (!splitId) return { error: "No plan matches that combination. Try another." };
+    const weekdays = newProfile.training_weekdays;
+    const weekdayMap = buildWeekdayMap(data.workoutsBySplit.get(splitId) || [], weekdays);
+    const old = saved.rana || { split_id: plan.split_id, weekday_map: plan.weekday_map };
+    const unchanged = old.split_id === splitId && JSON.stringify(old.weekday_map) === JSON.stringify(weekdayMap);
+    const ranaActive = (plan.active_plan_id || "rana") === "rana";
+    const splitName = shortSplitName(data.splitById.get(splitId));
+    const when = switchEffectiveDate() === todayStr() ? "from today" : "from tomorrow";
+    const message = ranaActive
+      ? `Rana's plan becomes ${splitName} on ${weekdays.length} days, ${when}. Your workouts and XP stay.`
+      : `Rana's plan becomes ${splitName} on ${weekdays.length} days. Your own plan stays active.`;
+    return { splitId, weekdays, weekdayMap, unchanged, ranaActive, message };
+  }
+
+  function applyPlanChange(change) {
+    const plan = Rana.storage.getPlan();
+    Rana.storage.saveSavedPlan({ plan_id: "rana", kind: "suggested", split_id: change.splitId, training_weekdays: change.weekdays, weekday_map: change.weekdayMap });
+    if (change.ranaActive) activatePlan("rana"); // keeps the old week in the history
+    else Rana.storage.savePlan({ ...plan, split_id: change.splitId, training_weekdays: change.weekdays });
+  }
+
   // A one-line summary for any weekday map: "4 days / week".
   function trainingDayCount(weekdayMap) {
     return Object.values(weekdayMap || {}).filter(Boolean).length;
@@ -506,6 +538,8 @@ Rana.plan = (() => {
     switchEffectiveDate,
     activatePlan,
     updateSavedPlan,
+    previewPlanChange,
+    applyPlanChange,
     trainingDayCount,
     matchSplit,
     repairPlan,

@@ -11,12 +11,7 @@ body.has-footer--tall {
 /* Rana and his question, 36px under the progress row; the answers start 8px
    below the bubble. */
 .q-stage { display: flex; flex-direction: column; gap: var(--space-2); margin-top: 36px; }
-.q-answers { display: flex; flex-direction: column; gap: var(--space-4); }
 
-/* Quiet lines under the answers. */
-.q-note { margin-top: var(--space-4); text-align: center; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
-.q-helper { margin: var(--space-4) 4px 0; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); text-wrap: pretty; }
-.q-error { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-danger); }
 
 /* Weight and reps side by side (or reps alone for a bodyweight lift). */
 .q-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

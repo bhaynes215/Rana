@@ -100,72 +100,33 @@ Rana.page.start({
     function buildQuestion(q) {
       const prompt = q.prompt(answers);
       const nodes = [Rana.ui.interview(prompt, { pose: q.pose })];
-      const area = el("div", "q-answers");
-      nodes.push(area);
-      let focus = null;
-      let footerNodes = null;
 
       // Checks the answer; on a mistake shows how to fix it and stays put.
-      let showError = () => {};
-      let read = () => undefined;
       const submit = () => {
-        const value = read();
+        const value = control.read();
         const error = q.validate ? q.validate(value, answers) : null;
-        if (error) return showError(error);
+        if (error) return control.showError(error);
         answers[q.field] = value;
         advance();
       };
-      const continueButton = () => button({ label: "Continue", kind: "primary", onClick: submit });
+      const control = Rana.answerControl(q, answers, {
+        onEnter: submit,
+        // Picking a single answer saves it and moves on after a short beat.
+        onChange: (value) => {
+          answers[q.field] = value;
+          if (q.type === "days" && (answers.training_weekdays || []).length !== value) answers.training_weekdays = [];
+          clearTimeout(autoAdvance);
+          autoAdvance = setTimeout(advance, 250);
+        },
+      });
+      nodes.push(control.el);
 
-      if (q.type === "text" || q.type === "number") {
-        const field = Rana.ui.field({ label: q.label, kind: q.type, unit: q.unit, value: answers[q.field] ?? "", placeholder: q.placeholder, autocomplete: q.autocomplete, onEnter: submit });
-        area.append(field);
-        read = () => field.getValue();
-        showError = (message) => field.setError(message);
-        focus = field.input;
-        footerNodes = [continueButton()];
-        if (q.optional) footerNodes.push(button({ label: "Skip for now", kind: "text", onClick: () => { answers[q.field] = ""; advance(); } }));
-      } else if (q.type === "single" || q.type === "days") {
-        const group = Rana.ui.optionGroup({
-          label: q.label,
-          options: q.options,
-          value: answers[q.field] === undefined ? null : String(answers[q.field]),
-          variant: q.type === "days" ? "tile" : "card",
-          // Picking an answer saves it and moves on after a short beat.
-          onChange: (value) => {
-            answers[q.field] = q.type === "days" ? Number(value) : value;
-            if (q.type === "days" && (answers.training_weekdays || []).length !== answers[q.field]) answers.training_weekdays = [];
-            clearTimeout(autoAdvance);
-            autoAdvance = setTimeout(advance, 250);
-          },
-        });
-        area.append(group);
-        if (q.type === "days") {
-          group.setTags(Object.fromEntries((Rana.plan.RECOMMENDED_DAYS[answers.fitness_level] || []).map((n) => [n, "Recommended"])));
-          area.append(el("p", "q-helper", q.helper(answers)));
-        }
-        if (q.footnote) area.append(el("p", "q-note", q.footnote));
-      } else {
-        // "multi" (limitations) and "weekdays": several answers, then Continue.
-        const error = el("p", "q-error", "", { role: "alert" });
-        error.hidden = true;
-        const group = Rana.ui.optionGroup({
-          label: q.label, options: q.options, value: answers[q.field] || [], multiple: true, variant: "compact",
-          onChange: (values, changed) => {
-            // "None of these" excludes every other answer, and any other answer removes it.
-            const next = q.exclusive
-              ? changed === q.exclusive ? (values.includes(changed) ? [changed] : []) : values.filter((v) => v !== q.exclusive)
-              : values;
-            group.setValue(next);
-            error.hidden = true;
-          },
-        });
-        area.append(group, error);
-        read = () => group.getValue();
-        showError = (message) => { error.textContent = message; error.hidden = false; };
-        footerNodes = [continueButton()];
-      }
-      return { nodes, footer: footerNodes, focus, prompt };
+      // Text, number and multiple-answer questions end with Continue; the
+      // single-choice ones move on by themselves.
+      const choosesOne = q.type === "single" || q.type === "days";
+      const footerNodes = choosesOne ? null : [button({ label: "Continue", kind: "primary", onClick: submit })];
+      if (q.optional && footerNodes) footerNodes.push(button({ label: "Skip for now", kind: "text", onClick: () => { answers[q.field] = ""; advance(); } }));
+      return { nodes, footer: footerNodes, focus: control.focus, prompt };
     }
 
     // ---- The lifts question -------------------------------------------------
@@ -233,7 +194,7 @@ Rana.page.start({
 
       refresh();
       return {
-        nodes: [Rana.ui.interview(prompt, { pose: "neutral" }), el("div", "q-answers", [steps, fields, readout])],
+        nodes: [Rana.ui.interview(prompt, { pose: "neutral" }), el("div", "answer", [steps, fields, readout])],
         footer: [
           button({ label: last ? "See my plan" : `Next: ${nextName}`, kind: "primary", onClick: submit }),
           button({ label: "I haven't done this", kind: "text", onClick: () => { answers.starting_lifts[lift.exercise_key] = { skipped: true }; advance(); } }),

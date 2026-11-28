@@ -613,6 +613,13 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 
 **Check:** plan switching keeps past XP identical (test section 7 still passes); Profile edits round-trip; the milestones are correct for the fixture's level.
 
+**As built (Phase 9):** `plan.html` (`js/pages/plan.js`, `css/pages/plan.css`), `plan-builder.html` (`js/pages/plan-builder.js`) and `profile.html` (`js/pages/profile.js`, `css/pages/profile.css`); the old `my-plan.*` and `account.*` are deleted.
+- **New shared pieces:** `Rana.answerControl` (`js/core/answer-control.js`) is the one control for a questionnaire answer, used by the questionnaire and by Profile's Edit sheets. `Rana.ui.expandableList` powers the Plan tab's day rows. `Rana.plan.previewPlanChange` / `applyPlanChange` handle a goal or training-days edit: the confirm message says what changes, and past XP never moves.
+- **Plan tab:** the active plan in full (Active tag, week strip, expanding days with the abs row), then the other plan as a smaller card (Set active with a confirm, Edit, Delete, or "Build your own plan"). Switching after training today shows a "starts tomorrow" tip.
+- **Profile:** name and Level, six tier milestones, earned titles, email with a disabled Sign out, every answer with Edit (weekdays must be 3 to 6), and the starting lifts of Rana's saved plan with Edit (or "I haven't done this").
+- **Verified in the browser at phone width with the fixture:** day rows expand; the builder saved an own plan; Set active, switching back and Delete worked; an age edit saved as a number; a goal change showed "Update Rana's plan?" and re-picked the split; a starting-lift edit saved. All of it was restored from a backup afterwards. Tests: 158 checks pass (section 15 covers the plan re-pick).
+- **Not exercised in the browser:** the "starts tomorrow" confirm text (only the tip) and a weekday edit that changes the day count.
+
 ### Phase 10: Sweep, accessibility, motion, end-to-end
 - Run the §9 grep checklist. Every item must return nothing.
 - Delete any file no page loads: list every `.js`/`.css` and grep for its `src`/`href`.

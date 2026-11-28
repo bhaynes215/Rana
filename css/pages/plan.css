@@ -1,0 +1,24 @@
+/* Plan tab and plan builder: the layout around the shared components. */
+
+.planpage { display: flex; flex-direction: column; gap: var(--space-5); }
+.plan-active { display: flex; flex-direction: column; gap: var(--space-4); }
+.plan-tag { align-self: flex-start; padding: 2px var(--space-3); border-radius: var(--radius-full); background: var(--color-accent); font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 700; }
+.plan-active__sub { margin-top: calc(var(--space-3) * -1); }
+.plan-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+/* The other plan: a smaller card. */
+.plan-other { display: flex; flex-direction: column; gap: var(--space-3); }
+.plan-other .btn--secondary { width: auto; align-self: flex-start; padding: 0 var(--space-5); }
+
+/* Plan builder: one card per weekday. */
+.builder { display: flex; flex-direction: column; gap: var(--space-4); }
+.builder-head { display: flex; align-items: center; gap: var(--space-2); }
+.builder-head .btn--icon { margin-left: -10px; }
+.builder-days { display: flex; flex-direction: column; gap: var(--space-3); }
+.builder-day { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); }
+.builder-day__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.builder-day__name { font-weight: 700; }
+.builder-day__toggle { display: flex; gap: var(--space-2); }
+.builder-day__toggle .chip { height: 40px; }
+.builder-day .chips { margin-right: calc(var(--space-4) * -1); padding-right: var(--space-4); }
+.builder-day__toggle .chips { margin: 0; padding: 0; overflow: visible; }

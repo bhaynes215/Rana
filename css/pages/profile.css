@@ -1,0 +1,22 @@
+/* Profile: the layout around the shared components. */
+
+.profile { display: flex; flex-direction: column; gap: var(--space-5); }
+.profile-who { display: flex; flex-direction: column; gap: var(--space-1); }
+.profile-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.profile-heading { font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: 700; color: var(--color-ink-muted); }
+
+/* The six tiers: reached ones tinted, the current one solid ink. */
+.milestones { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.milestone { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border: 1px solid var(--color-line); border-radius: var(--radius-full); color: var(--color-ink-muted); font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: 600; }
+.milestone.is-reached { border-color: var(--color-accent); background: var(--color-accent-wash); color: var(--color-ink); }
+.milestone.is-current { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-surface); }
+
+.titles { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-sm); line-height: var(--leading-sm); }
+.titles strong { font-weight: 700; }
+
+/* A row of answers: the label and its value, with Edit at the end. */
+.answer-row { display: flex; align-items: center; gap: var(--space-3); }
+.answer-row .list-row__text { flex: 1; }
+.answer-row .btn { flex: none; }
+.profile .card--list .list-row { align-items: center; }
+.q-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
