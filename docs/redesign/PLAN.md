@@ -643,6 +643,15 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
   9. then a never-trained run.
   Zero console errors.
 - Migration check (§5.6) against an old-shape fixture.
+**As built (Phase 10):**
+- **Grep checklist (§9):** every search returns nothing (no old fonts, clip-paths, glows, STR/AGI/VIT, deleted-page links, native popups, duplicate `el()` helpers; the only `box-shadow`s are the input focus ring and error borders). No emoji, no all-caps labels. A scan found no unused `.js`/`.css`, no broken `src`/`href`, and no page nothing links to.
+- **Accessibility:** a script checked every main screen at 390 px for unnamed buttons/links/inputs, tap targets under 44 px, progress bars without a value, and images without alt. The only finding was Profile's "Edit" buttons (38 px wide); `.btn--action` now has `min-width: var(--tap-min)`. (The Rest/Training chips in the plan builder measure 40 px tall but have a 44 px tap area from `::after`, by design.) Focus ring, reduced-motion rules and `aria-valuenow` were already in place.
+- **Motion:** reduced motion makes every transition and the page fade instant (`base.css`). `Rana.ui.transition` now also swallows `updateCallbackDone` rejections.
+- **End to end at 390 px (and a 1280 px layout check):** questionnaire as a returning lifter with lifts → plan reveal → sign-up (non-.edu refused, password never stored) → Today → a freestyle workout (picker, sets, rest timer, finish with difficulty) → summary → Progress → History → logbook → Edit (changed a weight, removed a set) → built an own plan → Set active showed the "from tomorrow" text and tip. Then a never-trained run through the same path. 1280 px: one 520 px column, no horizontal overflow on any page.
+- **Migration:** the old-shape fixture still shows 1,468 / 1,584 XP and every page loads with no script errors.
+- **Not exercised:** an own-plan workout on a day that is its training day (covered by test section 7, not the browser), the suggested-workout flow this session (checked in Phase 6), and the reduced-motion summary in a real browser.
+- The console showed "Transition was aborted… Document hidden" in the preview pane. It only appears because the pane is a background page; it is not a code error.
+
 
 ### Phase 11: Docs, cleanup, merge
 - **Rewrite `CLAUDE.md` as a current-state document** (what the app is, the architecture in §4, the rules, the decisions, and what's left). The dated changelog entries are history; git keeps them. Cut it to what a new session needs. `AGENTS.md` is a symlink, so leave it.

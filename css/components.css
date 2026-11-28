@@ -148,7 +148,7 @@ button.steps__seg::after { content: ""; position: absolute; inset: -20px -2px; }
 /* Text: an opt-out ("I haven't done this"), underlined. */
 .btn--text { padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 /* Action: a header action such as Finish. */
-.btn--action { padding: 0 4px; color: var(--color-accent-strong); font-weight: 700; white-space: nowrap; }
+.btn--action { min-width: var(--tap-min); padding: 0 4px; color: var(--color-accent-strong); font-weight: 700; white-space: nowrap; }
 /* Plain: a small inline action with an icon, such as Add set. */
 .btn--plain { padding: 0 4px; white-space: nowrap; }
 

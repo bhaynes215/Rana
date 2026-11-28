@@ -113,6 +113,7 @@ Rana.ui = (() => {
     if (direction) root.dataset.vt = direction;
     const t = document.startViewTransition(update);
     t.ready.catch(() => {}); // a skipped transition is not an error
+    t.updateCallbackDone.catch(() => {}); // (nor is one skipped because the tab was hidden)
     return t.finished.catch(() => {}).finally(() => {
       delete root.dataset.vt;
     });
