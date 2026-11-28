@@ -61,7 +61,10 @@ Rana.progress = (() => {
       if (record.target) {
         row.state = "tracking";
         row.start = Math.round(record.start);
-        row.current = Math.round(record.sessions > 0 ? record.best : record.start);
+        // While a lift is still being calibrated its first sessions are lighter
+        // than the answer by design, so the number never shows a "loss".
+        const best = record.sessions >= calibration ? record.best : Math.max(record.best, record.start);
+        row.current = Math.round(record.sessions > 0 ? best : record.start);
         row.target = record.target.value;
         row.delta = row.current - row.start;
       } else if (record.sessions > 0) {

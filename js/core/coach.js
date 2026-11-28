@@ -239,7 +239,9 @@ Rana.coach = (() => {
       if (row.unit !== "lb" || row.state !== "tracking" || row.history.length < 2) continue;
       const older = row.history.filter((h) => h.date <= cutoff);
       const baseline = older.length ? older[older.length - 1] : row.history[0];
-      const rise = row.current - Math.round(baseline.score);
+      // What was actually logged: while a lift is calibrating, `current` can be the questionnaire's answer.
+      const logged = Math.round(Math.max(...row.history.map((h) => h.score)));
+      const rise = logged - Math.round(baseline.score);
       if (rise >= COACH_RULES.MIN_RISE_LB && (!best || rise > best.rise)) {
         best = { row, rise, weeks: Math.max(1, Math.round(daysBetween(baseline.date, today) / 7)) };
       }

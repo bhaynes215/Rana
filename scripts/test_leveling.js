@@ -459,6 +459,10 @@ check("no target bonus during the 3 calibration sessions, even past the target",
 check("after calibration, an answer the logs already beat is replaced by a target from the logs",
   lift(T).target.source === "calibration" && lift(T).target.value === 295 && Math.round(lift(T).start) === 253);
 
+const tooHigh = ledgerOf([monSession(0, 100, 8), monSession(1, 100, 8), monSession(2, 100, 8)], plan3, mondays[2], RETURNING);
+check("an answer far above what was logged is replaced after calibration (127 < 80% of 175 -> target 150)", lift(tooHigh).target.source === "calibration" && lift(tooHigh).target.value === 150 && Math.round(lift(tooHigh).start) === 127);
+const closeEnough = ledgerOf([monSession(0, 130, 6), monSession(1, 130, 6), monSession(2, 130, 6)], plan3, mondays[2], RETURNING);
+check("an answer within 20% of what was logged keeps its target", lift(closeEnough).target.source === "answer" && lift(closeEnough).target.value === 205, `${lift(closeEnough).target.source} ${lift(closeEnough).target.value}`);
 const calSessions = [monSession(0, 200, 8), monSession(1, 200, 8), monSession(2, 200, 8)];
 const hitSession = monSession(3, 245, 8); // e1rm 310 beats the 295 target
 const T4 = ledgerOf([...calSessions, hitSession], plan3, mondays[3], RETURNING);

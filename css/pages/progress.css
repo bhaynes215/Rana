@@ -1,0 +1,31 @@
+/* Progress and the workout history: the layout around the shared components. */
+
+.progress { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* The Strength card: one row per main lift. The big number is each lift's estimated max. */
+.strength { padding: var(--space-4) var(--space-card) 6px; }
+.strength__head, .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.strength__list { margin-top: 4px; }
+.strength__row { padding: 7px 0; border-bottom: 1px solid var(--color-divider); }
+.strength__row:last-child { border-bottom: 0; }
+.strength__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.strength__name { font-size: var(--text-md); line-height: 22px; font-weight: 600; }
+.strength__value { font-family: var(--font-display); font-size: var(--text-2xl); line-height: 36px; font-weight: 700; letter-spacing: var(--tracking-2xl); font-variant-numeric: tabular-nums; }
+.strength__unit { margin-left: var(--space-1); font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; letter-spacing: 0; color: var(--color-ink-muted); }
+.strength__row .bar { margin-top: var(--space-2); }
+.strength__note { margin-top: 2px; padding-bottom: var(--space-1); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+
+/* Level history: weekly XP as five bars; the current week is ink, past weeks grey. */
+.chart { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; height: 112px; margin-top: var(--space-2); }
+.chart__week { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: var(--space-1); height: 100%; }
+.chart__level { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 700; white-space: nowrap; }
+.chart__bar { width: 100%; border-radius: var(--radius-xs); background: var(--color-chart-bar); }
+.chart__week.is-current .chart__bar { background: var(--color-ink); }
+.chart__date { font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); white-space: nowrap; }
+
+.section-block { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* The full history: a back arrow and a title, then each month as a list card. */
+.history-head { display: flex; align-items: center; gap: var(--space-2); }
+.history-head .btn--icon { margin-left: -10px; }
+.history-month { display: flex; flex-direction: column; gap: var(--space-2); }

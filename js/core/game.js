@@ -53,6 +53,10 @@ Rana.game = (() => {
     // questionnaire; starting guesses, the fitness expert's call.
     TARGET_HIT_XP: 500,
     TARGET_ROUND_LB: 5,
+    // When calibration ends, an answer more than 20% above what was logged
+    // (best < 80% of the answer) is replaced by the logged numbers, so a
+    // too-high answer can't leave an unreachable target and a "negative" gain.
+    TARGET_REBASE_BELOW: 0.8,
     TARGET_PERCENT: {
       "never-trained": 0.25,
       "returning": 0.15,
@@ -209,9 +213,11 @@ Rana.game = (() => {
     if (record.sessions < calibration) return; // still calibrating: no bonus yet
 
     if (record.sessions === calibration) {
-      // Calibration just ended: no target yet (answer skipped), or the answer
-      // was too low (the lift already beats its target). Start from the logged numbers.
-      if (!record.target || record.best >= record.target.value) {
+      // Calibration just ended: no target yet (answer skipped), the answer was
+      // too low (the lift already beats its target) or far too high. Start
+      // from the logged numbers.
+      const tooHigh = record.start && record.best < record.start * XP_RULES.TARGET_REBASE_BELOW;
+      if (!record.target || record.best >= record.target.value || tooHigh) {
         record.target = { value: nextTarget(record.best, record.unit, profile), set_on: date, source: "calibration" };
         record.start = record.best;
       }
@@ -260,9 +266,9 @@ Rana.game = (() => {
   // appears. Rules, in order:
   //   - No bonus during a lift's first CALIBRATION_SESSIONS sessions.
   //   - When the last calibration session ends, a lift with no target (the
-  //     questionnaire answer was skipped), or whose logged best already
-  //     beats the target (the answer was too low), gets its target from the
-  //     logged numbers instead.
+  //     questionnaire answer was skipped), whose logged best already beats
+  //     the target (the answer was too low) or is under 80% of the answer
+  //     (too high), gets its target from the logged numbers instead.
   //   - Afterwards, a session whose best reaches the target earns the bonus;
   //     the next target is that session's best plus the same percentage.
   // The questionnaire's answers only set the first target. They are never a

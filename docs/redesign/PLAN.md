@@ -590,6 +590,10 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 
 **Check:** vs `08-progress.png` using the fixture; a skipped lift shows calibrating, then gets a target after 3 sessions.
 
+**As built (Phase 8):** `progress.html` (`js/pages/progress.js`, `css/pages/progress.css`) and `history.html` (`js/pages/history.js`, reuses `progress.css`); the old history script is replaced. Strength rows, the five-week XP chart (current week ink, past weeks grey, level labels, an `aria-label` per bar), the three most recent workouts with "See all", and Rana's tip; history by month as list cards (the row XP sums to the total). The history page keeps the Progress tab active and has a back arrow to Progress.
+- Verified in the fixture and in three forced states: normal data, no workouts at all (answer-based targets, "Not logged yet" for a skipped lift, the empty history), and a calibrating lift ("Finding your starting weight · 2 of 3 sessions").
+- Two rule changes found while testing: (1) when calibration ends, an answer more than 20% above what was logged (best < 80% of the answer) is replaced by the logged numbers (`XP_RULES.TARGET_REBASE_BELOW`; tested; leveling doc updated), so a too-high answer can't leave a "-160 lb" gain and an unreachable target. (2) While a lift is still calibrating its row never shows a loss, and Rana's "fastest lift" tip is based on logged sets, not the displayed number.
+
 ### Phase 9: Plan tab, plan builder, Profile
 **Delete:** `my-plan.html/.js` and `account.html/.js` (rename and rewrite), the old builder styles.
 
