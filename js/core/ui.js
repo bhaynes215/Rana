@@ -172,10 +172,12 @@ Rana.ui = (() => {
   const openSheets = []; // the last one is on top and owns Escape and Tab
   let sheetCount = 0;
 
-  function sheet({ title, subtitle, message, content, actions = [], dismissible = true, role = "dialog", label }) {
+  // `className` adds a modifier to the panel (e.g. "sheet--tall" for the exercise picker);
+  // `initialFocus: "panel"` focuses the sheet itself instead of its first control.
+  function sheet({ title, subtitle, message, content, actions = [], dismissible = true, role = "dialog", label, className = "", initialFocus = "first" }) {
     const id = `sheet-${++sheetCount}`;
     const backdrop = el("div", "sheet-backdrop");
-    const panel = el("div", "sheet", null, { role, "aria-modal": "true", tabindex: "-1" });
+    const panel = el("div", `sheet ${className}`.trim(), null, { role, "aria-modal": "true", tabindex: "-1" });
     if (title) {
       panel.append(el("h2", "sheet__title", title, { id: `${id}-title` }));
       panel.setAttribute("aria-labelledby", `${id}-title`);
@@ -252,7 +254,8 @@ Rana.ui = (() => {
     // Two steps so the slide-in actually animates: first paint closed, then open.
     void backdrop.offsetHeight;
     backdrop.classList.add("is-open");
-    (autofocusTarget || focusables()[0] || panel).focus({ preventScroll: true });
+    // initialFocus "panel" keeps a search box from popping the phone keyboard open.
+    (autofocusTarget || (initialFocus === "panel" ? panel : focusables()[0]) || panel).focus({ preventScroll: true });
     return api;
   }
 

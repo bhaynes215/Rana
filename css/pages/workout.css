@@ -1,0 +1,41 @@
+/* Workout logging: the layout around the shared components. */
+
+/* Room for the pinned footer: the rest-timer row above the primary button. */
+body.has-footer { --footer-offset: 112px; }
+.footer-bar--workout .footer-bar__inner { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; padding-bottom: 14px; }
+.footer-bar--workout .footer-bar__inner > * + * { margin-top: 0; }
+
+/* Header: × on the left, the workout name over the elapsed time, Finish on the right. */
+.workout-header { display: flex; align-items: center; gap: var(--space-2); height: var(--tap-min); background: var(--color-bg); }
+.workout-header .btn--icon { margin-left: -10px; }
+.workout-header .btn--action { margin-right: -4px; }
+.workout-header__center { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.workout-header__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-md); line-height: 20px; font-weight: 700; }
+.workout-header__time { font-size: var(--text-sm); line-height: 18px; color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+
+.workout-bar { margin-top: var(--space-3); }
+
+/* One step. */
+.workout-stage { margin-top: 20px; }
+.step { display: flex; flex-direction: column; gap: 14px; }
+.step__heading { display: flex; flex-direction: column; gap: 2px; }
+.step__body { display: flex; flex-direction: column; gap: var(--space-4); }
+.step__sets { display: flex; flex-direction: column; gap: var(--space-2); margin-top: 2px; }
+.step__muscles { display: flex; flex-direction: column; gap: var(--space-2); }
+.step .btn--text { align-self: flex-start; padding-left: 0; }
+
+/* The rest timer above the primary button; its Skip sits at the end. */
+.rest-wrap { display: flex; align-items: center; gap: var(--space-1); }
+.rest-wrap .rest-row { flex: 1; min-width: 0; }
+.rest-wrap .btn { flex: none; min-height: var(--tap-min); padding: 0 var(--space-2); font-size: var(--text-sm); }
+
+/* "How hard was that?": five big taps. */
+.difficulty { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.difficulty__item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 72px; padding: 0; border: 1px solid var(--color-line); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-ink); font-family: var(--font-body);
+}
+.difficulty__item:active { background: var(--color-accent-wash); border-color: var(--color-accent); }
+.difficulty__number { font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: 700; }
+.difficulty__word { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 600; color: var(--color-ink-muted); }

@@ -1,10 +1,9 @@
-// The exercise picker for freestyle workouts: a full-screen panel with a
-// search box, seven muscle groups, and multi-select ("Add 3 exercises").
-// Modeled on the simple list-of-groups pickers workout apps use.
+// The exercise picker for freestyle workouts: a tall sheet with a search box,
+// seven muscle groups, and multi-select ("Add 3 exercises").
 //
 // Freestyle shows EVERY exercise in the library: no filtering, no warnings.
 // A user's reported limitations only ever shape the SUGGESTED workout
-// (see plan.js) — when you choose your own exercises, you're in charge.
+// (see plan.js): when you choose your own exercises, you're in charge.
 //
 // Usage:
 //   Rana.picker.open({
@@ -28,10 +27,6 @@ Rana.picker = (() => {
     { name: "Core", muscles: ["Core"] },
   ];
 
-  // The shared element builder (ui.js). NOTE: this picker still uses the old
-  // look's classes; Phase 6 of the redesign rebuilds it as a sheet.
-  const el = Rana.ui.el;
-
   // Compound lifts first (they're what most workouts are built around),
   // then alphabetical.
   function sortExercises(list) {
@@ -42,145 +37,85 @@ Rana.picker = (() => {
   }
 
   function open({ data, addedKeys = new Set(), onAdd }) {
-    const opener = document.activeElement;
+    const { el, button } = Rana.ui;
     const selected = []; // exercise_keys in the order they were tapped
-    let currentGroup = null; // null = the list of muscle groups
+    let group = null; // null = the list of muscle groups
     let query = "";
 
-    // --- Shell ---
-    const root = el("div", "picker");
-    root.setAttribute("role", "dialog");
-    root.setAttribute("aria-modal", "true");
-    root.setAttribute("aria-label", "Select exercise");
-    root.tabIndex = -1;
+    const search = Rana.ui.field({ label: "Search exercises", kind: "text", placeholder: "Search" });
+    const list = el("div", "picker__list");
+    const addButton = button({ label: "Add exercises", kind: "primary", disabled: true });
+    const sheet = Rana.ui.sheet({
+      title: "Add exercises",
+      content: el("div", "picker", [search, list, addButton]),
+      className: "sheet--tall",
+      initialFocus: "panel",
+    });
 
-    const header = el("header", "picker-header");
-    const cancelBtn = el("button", "picker-cancel", "Cancel");
-    cancelBtn.type = "button";
-    header.append(cancelBtn, el("h2", "picker-title", "Select exercise"), el("span"));
-
-    const searchWrap = el("div", "picker-search");
-    const searchInput = el("input");
-    searchInput.type = "search";
-    searchInput.placeholder = "Search exercises";
-    searchInput.setAttribute("aria-label", "Search exercises");
-    searchInput.autocomplete = "off";
-    searchWrap.appendChild(searchInput);
-
-    const body = el("div", "picker-body");
-
-    const footer = el("footer", "picker-footer");
-    const addBtn = el("button", "btn-continue picker-add", "Add exercises");
-    addBtn.type = "button";
-    addBtn.disabled = true;
-    footer.appendChild(addBtn);
-
-    root.append(header, searchWrap, body, footer);
-    document.body.appendChild(root);
-    document.body.classList.add("picker-open");
-
-    // --- Closing ---
-    function close() {
-      document.removeEventListener("keydown", onKeydown);
-      root.remove();
-      document.body.classList.remove("picker-open");
-      if (opener && opener.focus) opener.focus();
+    function updateAddButton() {
+      addButton.disabled = selected.length === 0;
+      addButton.textContent = selected.length === 0 ? "Add exercises" : `Add ${selected.length} exercise${selected.length === 1 ? "" : "s"}`;
     }
-    function onKeydown(event) {
-      if (event.key === "Escape") close();
-    }
-    document.addEventListener("keydown", onKeydown);
-    cancelBtn.addEventListener("click", close);
-
-    // --- Footer button text ---
-    function updateFooter() {
-      const n = selected.length;
-      addBtn.disabled = n === 0;
-      addBtn.textContent = n === 0 ? "Add exercises" : `Add ${n} exercise${n === 1 ? "" : "s"}`;
-    }
-    addBtn.addEventListener("click", () => {
-      if (selected.length === 0) return;
+    addButton.addEventListener("click", () => {
       const keys = [...selected];
-      close();
+      sheet.close(keys);
       onAdd(keys);
     });
 
-    // --- Rows ---
-    function groupRow(group) {
-      const count = data.exercises.filter((e) => group.muscles.includes(e.muscle_group)).length;
-      const row = el("button", "picker-row picker-row--group");
-      row.type = "button";
-      row.append(el("span", "picker-row-name", group.name), el("span", "picker-row-count num", String(count)), el("span", "picker-chevron", "›"));
-      row.addEventListener("click", () => {
-        currentGroup = group;
-        render();
-        body.scrollTop = 0;
+    // A row styled like an option card; `mark` adds the check circle.
+    function row({ label, description, mark, onClick, disabled = false, checked = false }) {
+      const text = el("span", "option__text", [el("span", "option__label", label), description && el("span", "option__desc", description)]);
+      const end = mark ? el("span", "option__mark", Rana.icons.svg("check", { size: 14, stroke: 3 }), { "aria-hidden": "true" }) : null;
+      const node = el("button", `option option--compact picker__row`, [text, end, !mark && onClick ? Rana.icons.svg("forward", { size: 20 }) : null], {
+        type: "button",
+        role: mark ? "checkbox" : null,
+        "aria-checked": mark ? String(checked) : null,
+        disabled,
       });
-      return row;
+      if (onClick) node.addEventListener("click", () => onClick(node));
+      return node;
     }
 
-    function exerciseRow(ex) {
-      const already = addedKeys.has(ex.exercise_key);
-      const row = el("button", "picker-row picker-row--exercise");
-      row.type = "button";
-      row.disabled = already;
-      row.setAttribute("aria-pressed", String(selected.includes(ex.exercise_key)));
-
-      const name = el("span", "picker-row-name", ex.exercise_name);
-      const tag = el("span", "picker-tag", ex.equipment);
-      const state = el("span", "picker-row-state", already ? "Added" : "");
-      row.append(name, tag, state);
-
-      row.addEventListener("click", () => {
-        const i = selected.indexOf(ex.exercise_key);
-        if (i === -1) selected.push(ex.exercise_key);
-        else selected.splice(i, 1);
-        row.setAttribute("aria-pressed", String(i === -1));
-        updateFooter();
+    function exerciseRow(exercise) {
+      const added = addedKeys.has(exercise.exercise_key);
+      return row({
+        label: exercise.exercise_name,
+        description: added ? `${exercise.equipment} · Added` : exercise.equipment,
+        mark: true,
+        checked: selected.includes(exercise.exercise_key),
+        disabled: added,
+        onClick: (node) => {
+          const i = selected.indexOf(exercise.exercise_key);
+          if (i === -1) selected.push(exercise.exercise_key);
+          else selected.splice(i, 1);
+          node.setAttribute("aria-checked", String(i === -1));
+          updateAddButton();
+        },
       });
-      return row;
     }
 
-    // --- Views: muscle groups → one group's exercises, or flat search results ---
+    // Muscle groups -> one group's exercises, or flat search results.
     function render() {
-      body.innerHTML = "";
+      list.replaceChildren();
       const q = query.trim().toLowerCase();
-
       if (q) {
-        const matches = sortExercises(
-          data.exercises.filter(
-            (e) =>
-              e.exercise_name.toLowerCase().includes(q) ||
-              e.equipment.toLowerCase().includes(q) ||
-              e.muscle_group.toLowerCase().includes(q)
-          )
-        );
-        if (matches.length === 0) body.appendChild(el("p", "picker-empty", "No exercises match your search."));
-        matches.forEach((ex) => body.appendChild(exerciseRow(ex)));
-      } else if (currentGroup) {
-        const back = el("button", "picker-row picker-row--back");
-        back.type = "button";
-        back.append(el("span", "picker-chevron picker-chevron--back", "‹"), el("span", "picker-row-name", currentGroup.name));
-        back.addEventListener("click", () => {
-          currentGroup = null;
-          render();
-        });
-        body.appendChild(back);
-        const inGroup = data.exercises.filter((e) => currentGroup.muscles.includes(e.muscle_group));
-        sortExercises(inGroup).forEach((ex) => body.appendChild(exerciseRow(ex)));
+        const matches = sortExercises(data.exercises.filter((e) => [e.exercise_name, e.equipment, e.muscle_group].some((t) => t.toLowerCase().includes(q))));
+        if (!matches.length) list.append(el("p", "picker__empty", "No exercises match your search."));
+        matches.forEach((e) => list.append(exerciseRow(e)));
+      } else if (group) {
+        list.append(button({ label: group.name, kind: "plain", icon: "back", onClick: () => { group = null; render(); } }));
+        sortExercises(data.exercises.filter((e) => group.muscles.includes(e.muscle_group))).forEach((e) => list.append(exerciseRow(e)));
       } else {
-        GROUPS.forEach((g) => body.appendChild(groupRow(g)));
+        GROUPS.forEach((g) => {
+          const count = data.exercises.filter((e) => g.muscles.includes(e.muscle_group)).length;
+          list.append(row({ label: g.name, description: `${count} exercises`, onClick: () => { group = g; render(); list.scrollTop = 0; } }));
+        });
       }
     }
 
-    searchInput.addEventListener("input", () => {
-      query = searchInput.value;
-      render();
-    });
-
+    search.input.addEventListener("input", () => { query = search.input.value; render(); });
     render();
-    updateFooter();
-    root.focus(); // not the search box: that would pop the keyboard open on phones
+    return sheet;
   }
 
   return { open, GROUPS };

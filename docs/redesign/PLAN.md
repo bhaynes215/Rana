@@ -533,6 +533,13 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
   - At zero it reads "Rest done" and calls `navigator.vibrate(200)` if available. No sound, no notifications.
   - Marking the next set done restarts it. A small text button "Skip rest" clears it.
 
+
+**As built (Phase 6, committed as one change; 6a and 6b were built together):**
+- Files: `workout.html` + `js/pages/workout.js` (the flow: header, steps bar, footer, rest timer, finish) + `css/pages/workout.css`; `js/core/workout.js` (pure rules: steps, finish checks, rest timer, tempo; tested in section 13); `js/core/workout-view.js` (one step's controls: set table, chips, tip, "How to do it"); `js/core/exercise-picker.js` rebuilt as a tall sheet (`sheet` got `className` and `initialFocus` options).
+- The old `active-session.*` is deleted. URL contract: `workout.html?date=YYYY-MM-DD` starts or resumes the suggested/own-plan workout; `?session=ID` opens any workout; a finished one redirects to `workout-summary.html?session=ID` (Phase 7).
+- Tested in the 127.0.0.1 fixture at 390 px and 1280 px: logging, un-toggling, an extra set, switching exercise chips (each keeps its own table), the abs step, reload mid-rest and resume (opens the first slot with sets left; the timer continues from its saved time), the finish confirm, the difficulty sheet and the saved difficulty, XP after finishing (an under-half workout counts as off-plan: flat 100 XP), a freestyle workout from empty, the picker (search, groups, multi-select), removing an exercise, the weight and reps error messages.
+- "Next: ..." names the next step's suggested exercise ("Next: Pull-Up"), not its movement pattern.
+- Not verified: the vibration at the end of a rest (no phone), reduced motion, and an own-plan day (it uses the same path as freestyle, checked by tests).
 **Check:**
 - vs `06` and `07` screenshots.
 - A full suggested workout logged through every step, including a swap, an extra set, an un-toggle, abs, reload mid-rest and resume.

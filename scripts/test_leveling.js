@@ -32,7 +32,7 @@ const ctx = {
 };
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js", "js/core/progress.js", "js/core/coach.js", "js/core/questions.js"]) {
+for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js", "js/core/progress.js", "js/core/coach.js", "js/core/questions.js", "js/core/workout.js"]) {
   vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx);
 }
 const { Rana } = ctx;
@@ -51,6 +51,7 @@ const data = {
 };
 data.slotsByWorkout.forEach((l) => l.sort((a, b) => a.slot_order - b.slot_order));
 data.splits = splits;
+data.exercises = exercises;
 data.splitById = new Map(splits.map((s) => [s.split_id, s]));
 data.workoutsBySplit = new Map(splits.map((s) => [s.split_id, (s.workout_ids || []).map((id) => data.workoutById.get(id)).filter(Boolean)]));
 data.optionsBySlot.forEach((l) => l.sort((a, b) => a.option_rank - b.option_rank));
@@ -603,6 +604,41 @@ const weekFor = P.weekDays(plan4.weekday_map, data);
 check("the week has seven entries, Monday first, with rest days empty", weekFor.length === 7 && weekFor[0].weekday === "Mon" && weekFor[0].lines.join() === "Upper,A" && weekFor[2].lines === null && weekFor[2].workout === null);
 const ownWeek = P.weekDays({ Mon: null, Tue: OWN, Wed: null }, data, { Tue: "Push" });
 check("an own-plan day shows the name the user gave it", ownWeek[1].lines.join() === "Push" && ownWeek[1].ownName === "Push" && ownWeek[1].workout === null && ownWeek[0].lines === null);
+
+// ---------- 13. A workout in progress: steps, finishing and the timers ----------
+console.log("");
+const WK = Rana.workout;
+const ulSession = { session_id: "s_w1", type: "planned", workout_id: "UL_UPPER_A", exercises: [], started_at: "2027-01-04T16:00:00.000Z" };
+const wsteps = WK.buildSteps({ session: ulSession, data, profile: { limitations: [] } });
+const ulSlots = data.slotsByWorkout.get("UL_UPPER_A");
+check("a suggested workout has one step per slot, then an abs step", wsteps.length === ulSlots.length + 1 && wsteps[0].type === "slot" && wsteps[wsteps.length - 1].type === "abs", wsteps.map((x) => x.type).join());
+check("a slot's exercise chips start with the suggested exercise, with no repeats", wsteps.slice(0, -1).every((x) => x.options[0] === x.pick.exerciseKey && new Set(x.options).size === x.options.length));
+const builtSession = { session_id: "s_w2", type: "freestyle", workout_id: null, exercises: ["bench", "bb_row"] };
+const builtSteps = WK.buildSteps({ session: builtSession, data, profile: null });
+check("a built workout has one step per exercise, then an add step", builtSteps.map((x) => x.id).join() === "ex:bench,ex:bb_row,add" && WK.buildSteps({ session: { ...builtSession, exercises: [] }, data, profile: null }).length === 1);
+check("own-plan days are built workouts too", WK.isBuilt({ type: "planned", workout_id: Rana.plan.OWN_WORKOUT }) && !WK.isBuilt(ulSession));
+
+const slotSet = (slot, i, key = "x") => ({ session_id: "s_w1", slot_id: slot.slot_id, exercise_key: key, set_index: i });
+const slot1Sets = [1, 2, 3].map((i) => slotSet(ulSlots[0], i));
+check("a slot step finds its sets by slot, whichever exercise was logged", WK.stepHasSets(wsteps[0], [slotSet(ulSlots[0], 1, "anything")]) && !WK.stepHasSets(wsteps[1], [slotSet(ulSlots[0], 1)]));
+check("abs and built steps find their sets by exercise", WK.stepHasSets(wsteps[wsteps.length - 1], [{ slot_id: null, exercise_key: wsteps[wsteps.length - 1].options[0] }]) && WK.stepHasSets(builtSteps[1], [{ slot_id: null, exercise_key: "bb_row" }]) && !WK.stepHasSets(builtSteps[0], [{ slot_id: null, exercise_key: "bb_row" }]));
+check("resume opens the first slot that still has sets to log", WK.firstOpenStep(wsteps, []) === 0 && WK.firstOpenStep(wsteps, slot1Sets) === 1 && WK.firstOpenStep(wsteps, ulSlots.flatMap((sl) => [1, 2, 3].slice(0, sl.working_sets).map((i) => slotSet(sl, i)))) === wsteps.length - 1);
+check("resume opens a built workout on its last exercise, or the add step when empty", WK.firstOpenStep(builtSteps, []) === 1 && WK.firstOpenStep([{ type: "add" }], []) === 0);
+
+check("finishing with nothing logged is blocked", WK.finishCheck({ session: ulSession, sets: [], data }).blocked === true);
+const allSlotSets = ulSlots.flatMap((sl) => Array.from({ length: sl.working_sets }, (_, i) => slotSet(sl, i + 1)));
+check("a suggested workout with at least half its sets finishes without a question", Object.keys(WK.finishCheck({ session: ulSession, sets: allSlotSets, data })).length === 0);
+check("under half asks first", WK.finishCheck({ session: ulSession, sets: slot1Sets.slice(0, 1), data }).confirm === true);
+check("extra sets never push a cut-short workout over the line", WK.creditedSets(ulSlots, [1, 2, 3, 4, 5, 6, 7, 8].map((i) => slotSet(ulSlots[0], i))) === ulSlots[0].working_sets);
+check("a built workout needs 3 sets for session XP, else asks", WK.finishCheck({ session: builtSession, sets: [{}, {}], data }).confirm === true && Object.keys(WK.finishCheck({ session: builtSession, sets: [{}, {}, {}], data })).length === 0);
+
+const restSession = { rest_started_at: "2027-01-04T16:10:00.000Z", rest_seconds: 150 };
+const at = (secondsAfter) => new Date("2027-01-04T16:10:00.000Z").getTime() + secondsAfter * 1000;
+check("the rest timer counts down from the saved time", WK.restState(restSession, at(48)).remaining === 102 && WK.restState(restSession, at(48)).total === 150 && WK.restState(restSession, at(999)).remaining === 0 && WK.restState({}, at(0)) === null);
+check("rest defaults to 2 minutes when an exercise has none", WK.restSecondsFor(null) === 120 && WK.restSecondsFor({ rest_seconds: 180 }) === 180);
+check("elapsed time", WK.elapsedText("2027-01-04T16:00:00.000Z", new Date("2027-01-04T16:24:10.000Z").getTime()) === "24:10" && WK.elapsedText("2027-01-04T16:00:00.000Z", new Date("2027-01-04T17:05:10.000Z").getTime()) === "1:05:10");
+check("tempo reads in words", WK.tempoText("3-1-1-0") === "Tempo 3-1-1-0: 3 s down, 1 s pause, 1 s up." && WK.tempoText("2-0-1-1") === "Tempo 2-0-1-1: 2 s down, no pause, 1 s up, 1 s squeeze at the top." && WK.tempoText("") === null);
+check("every prescribed tempo in the library reads", data.slots.every((sl) => !sl.tempo || WK.tempoText(sl.tempo)), data.slots.filter((sl) => sl.tempo && !WK.tempoText(sl.tempo)).map((sl) => sl.tempo).join(","));
 
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);
