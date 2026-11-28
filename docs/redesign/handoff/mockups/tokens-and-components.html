@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rana mockup: Rana tokens and component specs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Figtree:wght@400..800&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+<style>
+body{margin:0}
+</style>
+</head>
+<body>
+<div style="width: 1440px; height: 2640px; box-sizing: border-box; background: #FFFFFF; color: #24211D; font-family: 'Figtree', system-ui, sans-serif; padding: 64px; display: flex; flex-direction: column; gap: 56px">
+
+  <header style="display: flex; flex-direction: column; gap: 8px; max-width: 760px">
+    <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -0.02em">Rana design tokens</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 24px; color: #5F635B">Every value here is the one used in the screens above. The CSS block at the bottom can be pasted into styles.css as-is; the spacing names match the scale already in the repo.</p>
+  </header>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 64px">
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Color</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px">
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #EFF0EB; border: 1px solid #DEDFD8; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>bg</strong> #EFF0EB<br><span style="color: #5F635B">Chalk. App background.</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #FFFFFF; border: 1px solid #DEDFD8; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>surface</strong> #FFFFFF<br><span style="color: #5F635B">Cards, bubbles, inputs, tab bar.</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #24211D; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>ink</strong> #24211D<br><span style="color: #5F635B">Text, icons. Same as his tank top.</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #5F635B; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>ink-muted</strong> #5F635B<br><span style="color: #5F635B">Secondary text. 5.3:1 on chalk.</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #DEDFD8; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>line</strong> #DEDFD8<br><span style="color: #5F635B">Borders, bar tracks. <strong style="color: #24211D">divider</strong> #ECEDE7</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #F4A51C; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>accent</strong> #F4A51C<br><span style="color: #5F635B">Marigold. The one accent: fills only.</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="width: 56px; height: 56px; border-radius: 12px; background: #8F5207; flex: none"></span><span style="font-size: 14px; line-height: 20px"><strong>accent-strong</strong> #8F5207<br><span style="color: #5F635B">Accent as text or icon. 6.2:1 on white.</span></span></div>
+        <div style="display: flex; gap: 14px; align-items: center"><span style="display: flex; flex: none; width: 56px; height: 56px; border-radius: 12px; overflow: hidden"><span style="flex: 1; background: #FCE9C6"></span><span style="flex: 1; background: #FFF7E8"></span></span><span style="font-size: 14px; line-height: 20px"><strong>accent-soft</strong> #FCE9C6, <strong>wash</strong> #FFF7E8<br><span style="color: #5F635B">Focus ring, avatar ground; selected fill.</span></span></div>
+      </div>
+      <p style="margin: 0; font-size: 14px; line-height: 20px; color: #5F635B">Text on the accent is always ink (7.8:1), never white. Errors use <strong style="color: #B3261E">#B3261E</strong> and appear only on inputs.</p>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Type</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 20px; color: #5F635B">Bricolage Grotesque for screen titles and the one big number per screen. Figtree for everything else. Numbers that change use tabular figures.</p>
+      <div style="display: flex; flex-direction: column">
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0; border-bottom: 1px solid #ECEDE7"><span style="font-size: 12px; line-height: 16px; color: #5F635B">display 64/64, 700, −3%</span><span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -0.03em">Level 7</span></div>
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0; border-bottom: 1px solid #ECEDE7"><span style="font-size: 12px; line-height: 16px; color: #5F635B">2xl 40/44, 700, −2%</span><span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -0.02em">Upper / Lower</span></div>
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0; border-bottom: 1px solid #ECEDE7"><span style="font-size: 12px; line-height: 16px; color: #5F635B">xl 28/34, 700, −1%</span><span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.01em">Incline press</span></div>
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0; border-bottom: 1px solid #ECEDE7"><span style="font-size: 12px; line-height: 16px; color: #5F635B">lg 20/26, 600–700</span><span style="font-size: 20px; line-height: 26px; font-weight: 600">How many days a week can you train?</span></div>
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0; border-bottom: 1px solid #ECEDE7"><span style="font-size: 12px; line-height: 16px; color: #5F635B">md 16/24, 400 (600–700 labels)</span><span style="font-size: 16px; line-height: 24px">Heavy upper body compounds</span></div>
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0; border-bottom: 1px solid #ECEDE7"><span style="font-size: 12px; line-height: 16px; color: #5F635B">sm 14/20, 400</span><span style="font-size: 14px; line-height: 20px">Add 5 lb today. You hit every rep last time.</span></div>
+        <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: baseline; padding: 10px 0"><span style="font-size: 12px; line-height: 16px; color: #5F635B">xs 12/16, 600</span><span style="font-size: 12px; line-height: 16px; font-weight: 600">Recommended</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 64px">
+    <section style="display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Spacing</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 20px; color: #5F635B">The repo's existing scale, plus 20 for card padding. Screen side margin is 24.</p>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums">
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-1</span><span style="width: 4px; height: 16px; background: #F4A51C; border-radius: 2px"></span>4</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-2</span><span style="width: 8px; height: 16px; background: #F4A51C; border-radius: 2px"></span>8</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-3</span><span style="width: 12px; height: 16px; background: #F4A51C; border-radius: 2px"></span>12</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-4</span><span style="width: 16px; height: 16px; background: #F4A51C; border-radius: 2px"></span>16</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-card</span><span style="width: 20px; height: 16px; background: #F4A51C; border-radius: 2px"></span>20</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-5</span><span style="width: 24px; height: 16px; background: #F4A51C; border-radius: 2px"></span>24</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-6</span><span style="width: 32px; height: 16px; background: #F4A51C; border-radius: 2px"></span>32</div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 84px; color: #5F635B">space-7</span><span style="width: 48px; height: 16px; background: #F4A51C; border-radius: 2px"></span>48</div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Corner radius</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 20px; color: #5F635B">Bigger surfaces get bigger corners, so cards never all look alike.</p>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; font-size: 14px; line-height: 20px">
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 48px; border: 2px solid #24211D; border-radius: 12px; box-sizing: border-box"></span><span><strong>sm 12</strong><br><span style="color: #5F635B">Set inputs, video</span></span></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 48px; border: 2px solid #24211D; border-radius: 16px; box-sizing: border-box"></span><span><strong>md 16</strong><br><span style="color: #5F635B">Inputs, tips, tiles</span></span></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 48px; border: 2px solid #24211D; border-radius: 20px; box-sizing: border-box"></span><span><strong>lg 20</strong><br><span style="color: #5F635B">Options, list cards</span></span></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 48px; height: 48px; border: 2px solid #24211D; border-radius: 24px; box-sizing: border-box"></span><span><strong>xl 24</strong><br><span style="color: #5F635B">Hero card, bubble</span></span></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 64px; height: 32px; border: 2px solid #24211D; border-radius: 999px; box-sizing: border-box"></span><span><strong>full</strong><br><span style="color: #5F635B">Buttons, chips, bars</span></span></div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Icons</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 20px; color: #5F635B">One line set on a 24 grid: 1.75 stroke, round caps and joins, currentColor. Build with Lucide; these are drawn to match it.</p>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 16px; color: #24211D">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Today"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Plan"><rect x="3.5" y="5" width="17" height="15.5" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Progress"><path d="M4 4v16h16M8.5 16v-4M13 16V8M17.5 16v-6"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Profile"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Streak"><path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.4 3.7-8.3.4 2 1.6 3.2 2.8 3.7C12.4 7.4 13.3 5 15 3c.6 3.4 3.5 5.9 3.5 10.6 0 4.4-2.9 7.4-6.5 7.4z"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Exercises"><path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Duration"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Rest timer"><circle cx="12" cy="13" r="7.5"></circle><path d="M12 9.5V13M9.5 3h5"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Play"><path d="M8 5.5v13l10.5-6.5z"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Back"><path d="M15 18l-6-6 6-6"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Expand"><path d="M6 9l6 6 6-6"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Close"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Add"><path d="M12 5v14M5 12h14"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Done"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+      </div>
+    </section>
+  </div>
+
+  <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.01em">Components</h2>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 64px; margin-top: -32px">
+
+    <section style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 32px; align-items: start">
+      <div style="background: #EFF0EB; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 24px">
+        <div style="display: flex; align-items: flex-end; gap: 10px">
+          <div style="width: 96px; flex: none; margin-left: -6px"><div style="width: 100%; display: block; line-height: 0">
+
+
+
+
+<svg viewBox="0 0 200 220" width="100%" style="display: block" aria-hidden="true">
+<path d="M144 158Q151 188 150 226" stroke="#E3B08A" stroke-width="24" stroke-linecap="round" fill="none"></path>
+<ellipse cx="150" cy="192" rx="13" ry="17" fill="#E3B08A"></ellipse>
+<circle cx="58" cy="160" r="15" fill="#E3B08A"></circle><circle cx="142" cy="160" r="15" fill="#E3B08A"></circle>
+<path d="M155 168Q148 180 137 177M141 182Q138 195 142 208" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<path d="M88 106h24v34H88z" fill="#C98E66"></path>
+<path d="M60 162C62 147 78 137 100 137C122 137 138 147 140 162Z" fill="#E3B08A"></path>
+<path d="M88 141Q76 143 67 150M112 141Q124 143 133 150" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<path d="M64 226C63 198 64 176 68 162C72 152 78 145 81 139H91C92 150 95 158 100 158C105 158 108 150 109 139H119C122 145 128 152 132 162C136 176 137 198 136 226Z" fill="#24211D"></path>
+<path d="M73 180Q86 189 99 182M101 182Q114 189 127 180" stroke="#4A433C" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M56 166L66 204L93 132" stroke="#C98E66" stroke-width="27"></path><path d="M56 166L66 204L93 132" stroke="#E3B08A" stroke-width="23"></path></g>
+<circle cx="58" cy="160" r="13" fill="#E3B08A"></circle>
+<path d="M47 166Q53 177 64 175M63 178Q68 188 67 198M76 186Q82 170 85 156" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<ellipse cx="69" cy="84" rx="6" ry="9" fill="#E3B08A"></ellipse><ellipse cx="131" cy="84" rx="6" ry="9" fill="#E3B08A"></ellipse>
+<path d="M70 74C70 54 84 44 100 44C116 44 130 54 130 74V90C130 107 117 118 100 118C83 118 70 107 70 90Z" fill="#E3B08A"></path>
+<path d="M66 84C61 66 64 50 74 40C80 33 88 30 94 31C98 26 108 25 114 30C124 30 134 38 136 50C140 61 137 73 132 84C130 73 127 65 121 60C115 65 107 64 101 60C95 66 86 67 80 63C74 67 71 74 70 84Z" fill="#24211D"></path>
+<path d="M84 36C81 27 88 20 97 22C93 25 91 29 91 34ZM106 29C110 20 121 20 125 27C119 25 115 27 112 32ZM101 59C99 67 94 72 89 74C93 68 94 64 93 60Z" fill="#24211D"></path>
+<path d="M80 76Q87 73 94 75M106 71Q113 66 120 70" stroke="#24211D" stroke-width="4" stroke-linecap="round" fill="none"></path>
+<circle cx="90" cy="82" r="3.6" fill="#24211D"></circle><circle cx="116" cy="82" r="3.6" fill="#24211D"></circle>
+<path d="M100 87Q97 95 101 97" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<path d="M93 105Q101 108 109 103" stroke="#24211D" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<circle cx="94" cy="124" r="12" fill="#E3B08A" stroke="#C98E66" stroke-width="2"></circle>
+</svg>
+
+
+
+
+
+
+
+
+</div></div>
+          <div style="position: relative; flex: 1; background: #FFFFFF; border: 1px solid #DEDFD8; border-radius: 24px; padding: 14px 16px; margin-bottom: 44px">
+            <p style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Which days work best?</p>
+            <div aria-hidden="true" style="position: absolute; left: -8px; bottom: 22px; width: 14px; height: 14px; background: #FFFFFF; border-left: 1px solid #DEDFD8; border-bottom: 1px solid #DEDFD8; transform: rotate(45deg)"></div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 12px">
+          <div style="width: 44px; flex: none"><div style="width: 100%; display: block; line-height: 0">
+
+
+
+
+
+
+
+
+
+
+<div style="width: 100%; border-radius: 50%; overflow: hidden; background: #FCE9C6">
+<svg viewBox="40 34 120 120" width="100%" style="display: block" aria-hidden="true">
+<path d="M56 158Q49 188 50 226M144 158Q151 188 150 226" stroke="#E3B08A" stroke-width="24" stroke-linecap="round" fill="none"></path>
+<circle cx="58" cy="160" r="15" fill="#E3B08A"></circle><circle cx="142" cy="160" r="15" fill="#E3B08A"></circle>
+<path d="M88 106h24v34H88z" fill="#C98E66"></path>
+<path d="M60 162C62 147 78 137 100 137C122 137 138 147 140 162Z" fill="#E3B08A"></path>
+<path d="M88 141Q76 143 67 150M112 141Q124 143 133 150" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<path d="M64 226C63 198 64 176 68 162C72 152 78 145 81 139H91C92 150 95 158 100 158C105 158 108 150 109 139H119C122 145 128 152 132 162C136 176 137 198 136 226Z" fill="#24211D"></path>
+<ellipse cx="69" cy="84" rx="6" ry="9" fill="#E3B08A"></ellipse><ellipse cx="131" cy="84" rx="6" ry="9" fill="#E3B08A"></ellipse>
+<path d="M70 74C70 54 84 44 100 44C116 44 130 54 130 74V90C130 107 117 118 100 118C83 118 70 107 70 90Z" fill="#E3B08A"></path>
+<path d="M66 84C61 66 64 50 74 40C80 33 88 30 94 31C98 26 108 25 114 30C124 30 134 38 136 50C140 61 137 73 132 84C130 73 127 65 121 60C115 65 107 64 101 60C95 66 86 67 80 63C74 67 71 74 70 84Z" fill="#24211D"></path>
+<path d="M84 36C81 27 88 20 97 22C93 25 91 29 91 34ZM106 29C110 20 121 20 125 27C119 25 115 27 112 32ZM101 59C99 67 94 72 89 74C93 68 94 64 93 60Z" fill="#24211D"></path>
+<path d="M80 75Q87 71 94 74M106 74Q113 71 120 75" stroke="#24211D" stroke-width="4" stroke-linecap="round" fill="none"></path>
+<circle cx="87" cy="84" r="3.6" fill="#24211D"></circle><circle cx="113" cy="84" r="3.6" fill="#24211D"></circle>
+<path d="M100 87Q97 95 101 97" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"></path>
+<path d="M86 102Q100 116 114 102Z" fill="#FFFFFF" stroke="#24211D" stroke-width="2.5" stroke-linejoin="round"></path>
+</svg>
+</div>
+
+
+</div></div>
+          <div style="position: relative; flex: 1; background: #FFFFFF; border: 1px solid #DEDFD8; border-radius: 16px; padding: 10px 14px">
+            <p style="margin: 0; font-size: 14px; line-height: 20px">Rest day. Your legs will thank you on Thursday.</p>
+            <div aria-hidden="true" style="position: absolute; left: -7px; top: 15px; width: 12px; height: 12px; background: #FFFFFF; border-left: 1px solid #DEDFD8; border-bottom: 1px solid #DEDFD8; transform: rotate(45deg)"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 21px">
+        <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Speech bubble</h3>
+        <p style="margin: 0"><strong>Interview</strong> (onboarding, plan reveal): surface fill, 1 px line border, radius 24, padding 16 × 18. Text lg 20/26 at 600; drop to md 16/22 at 500 past about 80 characters. Rana sits left at 96–124 px wide, bottom-aligned, 10 px gap.</p>
+        <p style="margin: 0"><strong>Tip</strong> (every other screen): 44 px avatar (36 px during a workout), radius 16, padding 10 × 14, text sm 14/20. Under 90 characters and always specific: a weight, a rep count or an exercise.</p>
+        <p style="margin: 0"><strong>Tail</strong>: a 12–14 px square rotated 45°, left and bottom borders only, 7–8 px outside the left edge. Bottom 22 for interview, top 13–15 for tips so it points at the avatar's mouth.</p>
+        <p style="margin: 0; color: #5F635B">No shadow. One bubble per screen. Interview bubbles fade and rise 8 px over 240 ms when the question changes; nothing else on the screen animates.</p>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 32px; align-items: start">
+      <div style="background: #EFF0EB; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 24px">
+        <div>
+          <div style="height: 10px; border-radius: 999px; background: #DEDFD8; overflow: hidden"><div style="width: 45%; height: 100%; border-radius: 999px; background: #F4A51C"></div></div>
+          <div style="margin-top: 8px; display: flex; justify-content: space-between; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums"><span><strong>1,840</strong> <span style="color: #5F635B">/ 2,156 XP</span></span><span style="color: #5F635B">316 XP to Level 8</span></div>
+        </div>
+        <div>
+          <div style="height: 6px; border-radius: 999px; background: #E3E4DD; overflow: hidden"><div style="width: 40%; height: 100%; border-radius: 999px; background: #F4A51C"></div></div>
+          <div style="margin-top: 6px; display: flex; justify-content: space-between; font-size: 14px; line-height: 20px; color: #5F635B; font-variant-numeric: tabular-nums"><span>Started at 225</span><span style="color: #8F5207; font-weight: 700">+20 lb</span><span>Target 275</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-variant-numeric: tabular-nums"><strong>Rest 1:42</strong><div style="flex: 1; height: 6px; border-radius: 999px; background: #DEDFD8; overflow: hidden"><div style="width: 32%; height: 100%; background: #24211D; border-radius: 999px"></div></div><span style="color: #5F635B">2:30</span></div>
+        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px"><span style="height: 4px; border-radius: 999px; background: #F4A51C"></span><span style="height: 4px; border-radius: 999px; background: #F4A51C"></span><span style="height: 4px; border-radius: 999px; background: #DEDFD8"></span><span style="height: 4px; border-radius: 999px; background: #DEDFD8"></span><span style="height: 4px; border-radius: 999px; background: #DEDFD8"></span><span style="height: 4px; border-radius: 999px; background: #DEDFD8"></span></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 21px">
+        <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Progress bar</h3>
+        <p style="margin: 0"><strong>Level</strong>: 10 px tall, line track, accent fill, full radius. Always shows the numbers under it: XP so far over the next level's total on the left, XP remaining on the right. Level n needs 44 × (n − 1)² XP, per docs/leveling-system.md.</p>
+        <p style="margin: 0"><strong>Lift</strong>: 6 px. The bar spans start to target, so fill = (current − start) ÷ (target − start). Start, gain and target sit under it.</p>
+        <p style="margin: 0"><strong>Rest timer</strong>: 6 px with an ink fill, so it never reads as progress toward a goal. <strong>Steps</strong> (exercise 2 of 6, onboarding): 4 px segments, 4 px gaps.</p>
+        <p style="margin: 0; color: #5F635B">Use role="progressbar" with min, max and now. Fills animate width over 240 ms only when the value changes.</p>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 32px; align-items: start">
+      <div style="background: #EFF0EB; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <button type="button" style="height: 56px; border: 0; border-radius: 999px; background: #F4A51C; color: #24211D; font: inherit; font-size: 16px; font-weight: 700">Start workout</button>
+        <button type="button" style="height: 56px; border: 0; border-radius: 999px; background: #E0940F; color: #24211D; font: inherit; font-size: 16px; font-weight: 700">Pressed</button>
+        <button type="button" disabled="" style="height: 56px; border: 0; border-radius: 999px; background: #DEDFD8; color: #5F635B; font: inherit; font-size: 16px; font-weight: 700">Disabled</button>
+        <button type="button" style="height: 56px; border: 1px solid #DEDFD8; border-radius: 999px; background: #FFFFFF; color: #24211D; font: inherit; font-size: 16px; font-weight: 600">Start a workout anyway</button>
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <button type="button" style="height: 44px; border: 0; background: transparent; color: #24211D; font: inherit; font-size: 16px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 0">I don't bench yet</button>
+          <button type="button" style="height: 44px; border: 0; background: transparent; color: #8F5207; font: inherit; font-size: 16px; font-weight: 700; padding: 0">Finish</button>
+          <button type="button" aria-label="Back" style="width: 44px; height: 44px; border: 0; background: transparent; color: #24211D; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 21px">
+        <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Buttons</h3>
+        <p style="margin: 0"><strong>Primary</strong>: 56 tall, full radius, accent fill, ink text md 16/700. One per screen, pinned to the bottom with 24 px side margins. Pressed #E0940F; disabled uses line fill and muted text.</p>
+        <p style="margin: 0"><strong>Secondary</strong>: 56 tall (44 compact), surface fill, 1 px line border, ink 16/600. For the quieter path, such as starting on a rest day.</p>
+        <p style="margin: 0"><strong>Text</strong>: 44 px hit area. Ink with a 3 px underline offset for opt-outs; accent-strong 700 for header actions like Finish. <strong>Icon</strong>: 44 × 44, 24 px glyph, aria-label required.</p>
+        <p style="margin: 0; color: #5F635B">Labels say what happens: "Start workout", "Next: pull-up", "Start my plan". No arrows appended, no all caps.</p>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 32px; align-items: start">
+      <div style="background: #EFF0EB; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <div style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+          <p style="margin: 0; font-size: 14px; line-height: 20px; color: #5F635B">Today's workout</p>
+          <p style="margin: 2px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; line-height: 34px; font-weight: 700">Lower A</p>
+          <p style="margin: 2px 0 0; font-size: 14px; line-height: 20px; color: #5F635B">5 exercises, about 45 min</p>
+        </div>
+        <ul style="list-style: none; margin: 0; padding: 4px 18px; background: #FFFFFF; border-radius: 20px">
+          <li style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #ECEDE7; font-size: 16px"><span style="font-weight: 600">Upper A</span><span style="color: #5F635B; font-size: 14px">60 min</span></li>
+          <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 16px"><span style="font-weight: 600">Lower A</span><span style="color: #5F635B; font-size: 14px">45 min</span></li>
+        </ul>
+        <div style="background: #FFFFFF; border-radius: 16px; min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; box-sizing: border-box">
+          <span style="flex: 1; font-size: 16px; font-weight: 600">How to do it</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 21px">
+        <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Cards</h3>
+        <p style="margin: 0"><strong>Hero card</strong>: surface, radius 24, padding 20, no border, no shadow. At most one per screen (Today's workout, Strength).</p>
+        <p style="margin: 0"><strong>List card</strong>: radius 20, padding 4 × 18, rows 12 px top and bottom with a divider #ECEDE7 between them.</p>
+        <p style="margin: 0"><strong>Option card</strong> (onboarding): radius 20, 1 px line border, 72 min height. Selected: 2 px accent border, wash fill, filled check. Single-choice questions advance on tap after a short pause.</p>
+        <p style="margin: 0"><strong>Collapsible</strong>: radius 16, a 60 px button header with aria-expanded; the chevron turns 180° over 160 ms and the body pushes content down.</p>
+        <p style="margin: 0; color: #5F635B">Everything else sits straight on chalk. If two cards side by side look the same, one of them should be a list.</p>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 32px; align-items: start; grid-column: 1 / -1; max-width: 640px">
+      <div style="background: #EFF0EB; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">Weight</span><span style="display: flex; align-items: center; height: 60px; padding: 0 16px; border-radius: 16px; border: 1px solid #DEDFD8; background: #FFFFFF; box-sizing: border-box"><input type="text" value="150" style="flex: 1; min-width: 0; border: 0; font: inherit; font-size: 20px; font-weight: 700; padding: 0; background: transparent; color: #24211D"><span style="color: #5F635B">lb</span></span></label>
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">Reps</span><span style="display: flex; align-items: center; height: 60px; padding: 0 15px; border-radius: 16px; border: 2px solid #24211D; background: #FFFFFF; box-sizing: border-box; box-shadow: 0 0 0 3px #FCE9C6"><input type="text" value="5" style="flex: 1; min-width: 0; border: 0; font: inherit; font-size: 20px; font-weight: 700; padding: 0; background: transparent; color: #24211D"></span></label>
+        </div>
+        <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">Reps</span><span style="display: flex; align-items: center; height: 60px; padding: 0 15px; border-radius: 16px; border: 2px solid #B3261E; background: #FFFFFF; box-sizing: border-box"><input type="text" value="80" aria-invalid="true" style="flex: 1; min-width: 0; border: 0; font: inherit; font-size: 20px; font-weight: 700; padding: 0; background: transparent; color: #24211D"></span><span style="font-size: 14px; line-height: 20px; color: #B3261E">Enter reps between 1 and 30.</span></label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <span style="height: 40px; padding: 0 15px; border-radius: 999px; border: 2px solid #F4A51C; background: #FFF7E8; font-size: 16px; font-weight: 600; display: flex; align-items: center; box-sizing: border-box">Pull-up</span>
+          <span style="height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #DEDFD8; background: #FFFFFF; font-size: 16px; font-weight: 600; display: flex; align-items: center; box-sizing: border-box">Lat pulldown</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 21px">
+        <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Inputs</h3>
+        <p style="margin: 0"><strong>Number field</strong>: 60 tall in onboarding (label above, sm 14/600; unit suffix muted), 48 tall in set rows (radius 12, centered). Value lg 20/700, tabular figures. Digits only with a numeric keypad, no spinners: keep using Rana.ui.numericField.</p>
+        <p style="margin: 0"><strong>States</strong>: focus = 2 px ink border plus a 3 px accent-soft ring. Error = 2 px #B3261E border and a message under it that says how to fix it. Logged sets drop their border and fill so finished numbers read as plain text.</p>
+        <p style="margin: 0"><strong>Chips</strong> (exercise options): 40 tall, full radius. Selected uses the same accent border and wash as option cards. A solid ink chip only marks the current step.</p>
+      </div>
+    </section>
+  </div>
+
+  <section style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">CSS variables</h2>
+    <pre style="margin: 0; padding: 28px 32px; background: #24211D; color: #F3F2EC; border-radius: 20px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 14px; line-height: 22px; white-space: pre; overflow: hidden; column-count: 2; column-gap: 48px">:root {
+  /* Color */
+  --color-bg: #EFF0EB;            /* chalk */
+  --color-surface: #FFFFFF;
+  --color-ink: #24211D;
+  --color-ink-muted: #5F635B;
+  --color-line: #DEDFD8;
+  --color-divider: #ECEDE7;
+  --color-accent: #F4A51C;        /* marigold */
+  --color-accent-pressed: #E0940F;
+  --color-accent-strong: #8F5207; /* accent text/icons */
+  --color-accent-soft: #FCE9C6;   /* focus ring, avatar */
+  --color-accent-wash: #FFF7E8;   /* selected fill */
+  --color-danger: #B3261E;
+
+  /* Character (Rana only) */
+  --rana-skin: #E3B08A;
+  --rana-skin-shadow: #C98E66;
+
+  /* Type */
+  --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-xs: 12px;      --leading-xs: 16px;
+  --text-sm: 14px;      --leading-sm: 20px;
+  --text-md: 16px;      --leading-md: 24px;
+  --text-lg: 20px;      --leading-lg: 26px;
+  --text-xl: 28px;      --leading-xl: 34px;
+  --text-2xl: 40px;     --leading-2xl: 44px;
+  --text-display: 64px; --leading-display: 64px;
+
+  /* Spacing (same names as the repo today) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+  --space-4: 16px; --space-card: 20px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+
+  /* Radius */
+  --radius-sm: 12px;  --radius-md: 16px;
+  --radius-lg: 20px;  --radius-xl: 24px;
+  --radius-full: 999px;
+
+  /* Sizes */
+  --tap-min: 44px;
+  --button-h: 56px;
+  --input-h: 60px;   --input-h-set: 48px;
+  --tabbar-h: 84px;
+  --avatar-tip: 44px; --avatar-workout: 36px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 160ms;  --dur-base: 240ms;
+}
+/* Google Fonts:
+   Bricolage Grotesque (opsz, 400-800)
+   Figtree (400-800) */</pre>
+  </section>
+</div>
+</body>
+</html>

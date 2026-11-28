@@ -1,0 +1,102 @@
+/*
+  Rana design tokens (light redesign, Nov 2026).
+  Replaces the dark "system HUD" variables at the top of styles.css.
+  The --space-* names and values match the scale already in the repo,
+  so existing spacing keeps working.
+
+  Fonts: add this to the <head> of every page, replacing the Chakra Petch /
+  Barlow / Inter links:
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400..800&display=swap">
+*/
+
+:root {
+  /* Color */
+  --color-bg: #EFF0EB;              /* "chalk": app background */
+  --color-surface: #FFFFFF;         /* cards, bubbles, inputs, tab bar */
+  --color-ink: #24211D;             /* text, icons; same as Rana's tank top */
+  --color-ink-muted: #5F635B;       /* secondary text: 5.3:1 on bg, 6.1:1 on white */
+  --color-line: #DEDFD8;            /* borders, progress tracks */
+  --color-divider: #ECEDE7;         /* row dividers inside cards */
+  --color-track-soft: #E3E4DD;      /* lift progress track inside white cards */
+  --color-accent: #F4A51C;          /* marigold: the one accent. Fills only. */
+  --color-accent-pressed: #E0940F;
+  --color-accent-strong: #8F5207;   /* accent as text or icon on light: 6.2:1 */
+  --color-accent-soft: #FCE9C6;     /* focus ring, avatar background */
+  --color-accent-wash: #FFF7E8;     /* selected option / chip fill */
+  --color-chart-bar: #D3D5CC;       /* past weeks in charts */
+  --color-dashed: #C4C6BD;          /* dashed rest-day outline */
+  --color-danger: #B3261E;          /* input errors only */
+
+  /* Character (Rana illustration only) */
+  --rana-skin: #E3B08A;
+  --rana-skin-shadow: #C98E66;
+
+  /* Type */
+  --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --text-xs: 12px;      --leading-xs: 16px;       /* tags, tab labels, table heads */
+  --text-sm: 14px;      --leading-sm: 20px;       /* secondary text, tips */
+  --text-md: 16px;      --leading-md: 24px;       /* body, buttons, option labels */
+  --text-lg: 20px;      --leading-lg: 26px;       /* section heads, interview questions, input values */
+  --text-xl: 28px;      --leading-xl: 34px;       /* screen titles (display font) */
+  --text-2xl: 40px;     --leading-2xl: 44px;      /* split name, lift numbers (display font) */
+  --text-display: 64px; --leading-display: 64px;  /* the one hero number per screen */
+
+  --tracking-display: -0.03em;
+  --tracking-2xl: -0.02em;
+  --tracking-xl: -0.01em;
+
+  /* Spacing (same names as the repo today, plus card padding) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-card: 20px;
+  --space-5: 24px;   /* screen side margin */
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radius: bigger surfaces get bigger corners */
+  --radius-xs: 8px;    /* chart bars, swatches */
+  --radius-sm: 12px;   /* set-row inputs, video */
+  --radius-md: 16px;   /* inputs, tip bubbles, tiles, collapsible */
+  --radius-lg: 20px;   /* option cards, list cards */
+  --radius-xl: 24px;   /* hero card, interview bubble */
+  --radius-full: 999px;/* buttons, chips, progress bars */
+
+  /* Sizes */
+  --tap-min: 44px;
+  --button-h: 56px;
+  --input-h: 60px;
+  --input-h-set: 48px;
+  --chip-h: 40px;
+  --tabbar-h: 84px;
+  --avatar-tip: 44px;
+  --avatar-workout: 36px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers that change (sets, XP, timers) never jump around. */
+.num { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}
