@@ -2,9 +2,9 @@
 <path d="M58 160L22 148M142 160L178 148" stroke="#E3B08A" stroke-width="25" stroke-linecap="round" fill="none"/>
 <path d="M22 148L24 100M178 148L176 100" stroke="#E3B08A" stroke-width="22" stroke-linecap="round" fill="none"/>
 <circle cx="24" cy="96" r="13" fill="#E3B08A"/><circle cx="176" cy="96" r="13" fill="#E3B08A"/>
-<ellipse cx="43" cy="145" rx="15" ry="11" transform="rotate(-10 43 145)" fill="#E3B08A"/><ellipse cx="157" cy="145" rx="15" ry="11" transform="rotate(10 157 145)" fill="#E3B08A"/>
+<ellipse cx="40" cy="140" rx="13.5" ry="10.5" transform="rotate(-12 40 140)" fill="#E3B08A"/><ellipse cx="160" cy="140" rx="13.5" ry="10.5" transform="rotate(12 160 140)" fill="#E3B08A"/>
 <circle cx="58" cy="160" r="15" fill="#E3B08A"/><circle cx="142" cy="160" r="15" fill="#E3B08A"/>
-<path d="M31 138Q27 146 31 154M169 138Q173 146 169 154M29 108Q33 120 31 132M171 108Q167 120 169 132M47 170Q57 178 66 172M153 170Q143 178 134 172" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+<path d="M29 108Q33 120 31 132M171 108Q167 120 169 132M50 146Q42 157 48 169M150 146Q158 157 152 169" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"/>
 <path d="M88 106h24v34H88z" fill="#C98E66"/>
 <path d="M60 162C62 147 78 137 100 137C122 137 138 147 140 162Z" fill="#E3B08A"/>
 <path d="M88 141Q76 143 67 150M112 141Q124 143 133 150" stroke="#C98E66" stroke-width="2.5" stroke-linecap="round" fill="none"/>
