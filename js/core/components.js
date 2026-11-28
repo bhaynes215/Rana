@@ -202,10 +202,11 @@
   // variant "card": a row with a label and a description (questionnaire answers)
   // variant "tile": a square with a big number (`label`), `unit`, and an
   //                 optional `tag` such as "Recommended" (training days)
+  // variant "compact": a short card in two columns, for long lists (weekdays)
   // multiple: true  -> checkboxes; value is an array
   function optionGroup({ label, options, value, onChange, variant = "card", multiple = false }) {
     const role = multiple ? "checkbox" : "radio";
-    const root = el("div", variant === "tile" ? "option-grid" : "option-list", null, {
+    const root = el("div", variant === "tile" || variant === "compact" ? "option-grid" : "option-list", null, {
       role: multiple ? "group" : "radiogroup",
       "aria-label": label,
     });
@@ -216,7 +217,7 @@
       const body = variant === "tile"
         ? [el("span", "tile__number", option.label), el("span", "tile__unit", option.unit), el("span", "tile__tag", option.tag || ""), mark]
         : [el("span", "option__text", [el("span", "option__label", option.label), option.description && el("span", "option__desc", option.description)]), mark];
-      const item = el("button", variant === "tile" ? "option option--tile" : "option", body, { type: "button", role, "aria-checked": "false" });
+      const item = el("button", variant === "tile" ? "option option--tile" : variant === "compact" ? "option option--compact" : "option", body, { type: "button", role, "aria-checked": "false" });
       item.dataset.value = option.value;
       item.addEventListener("click", () => {
         if (multiple) current = current.includes(option.value) ? current.filter((v) => v !== option.value) : [...current, option.value];

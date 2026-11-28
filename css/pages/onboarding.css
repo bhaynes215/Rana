@@ -1,0 +1,30 @@
+/* Questionnaire: the layout around the shared components. */
+
+/* The pinned buttons change with each question, so the script sets these
+   classes (see setFooter): room for one primary button, or on the lifts
+   question for a text button under it as well. Questions that move on by
+   themselves have no buttons and reserve nothing. */
+body.has-footer--tall {
+  --footer-offset: calc(var(--button-h) + var(--tap-min) + var(--space-3) + var(--space-6));
+}
+
+/* Rana and his question, 36px under the progress row; the answers start 8px
+   below the bubble. */
+.q-stage { display: flex; flex-direction: column; gap: var(--space-2); margin-top: 36px; }
+.q-answers { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* Quiet lines under the answers. */
+.q-note { margin-top: var(--space-4); text-align: center; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.q-helper { margin: var(--space-4) 4px 0; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); text-wrap: pretty; }
+.q-error { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-danger); }
+
+/* Weight and reps side by side (or reps alone for a bodyweight lift). */
+.q-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.q-fields--single { grid-template-columns: minmax(0, 1fr); }
+
+/* The lifts question: the live estimate, the one bold element on that screen. */
+.lift-readout { margin-top: var(--space-3); }
+.lift-readout__label { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.lift-readout__value { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-1); }
+.lift-readout__unit { font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: 700; letter-spacing: var(--tracking-xl); }
+.lift-readout__target { margin-top: var(--space-3); color: var(--color-ink-muted); text-wrap: pretty; }

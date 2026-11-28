@@ -32,7 +32,7 @@ const ctx = {
 };
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js", "js/core/progress.js", "js/core/coach.js"]) {
+for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js", "js/core/progress.js", "js/core/coach.js", "js/core/questions.js"]) {
   vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx);
 }
 const { Rana } = ctx;
@@ -565,6 +565,24 @@ const lastSource = { sets: lastParts.flatMap((p) => p.sets), sessions: lastParts
 check("last time: the previous session's sets, newest first", Rana.progress.lastTime(K, lastSource).length === 3 && Rana.progress.lastTime(K, lastSource)[0].weight === 110);
 check("last time: leaves out the workout in progress", Rana.progress.lastTime(K, lastSource, lastParts[1].session.session_id)[0].weight === 100 && Rana.progress.lastTime("front_squat", lastSource).length === 0);
 check("set formatting", Rana.progress.formatSet({ weight: 135, reps: 8 }) === "135 × 8" && Rana.progress.formatSet({ weight: 0, reps: 8 }) === "8 reps");
+
+// ---------- 11. The questionnaire's definitions ----------
+console.log("");
+const Q = Rana.questions;
+const ids = Q.list.map((q) => q.id).join();
+check("15 questions, in order", ids === "name,gender,age,height,weight_current,weight_target,goal,focus_area,fitness_level,activity_level,limitations,gym_type,days,weekdays,lifts", ids);
+check("the lifts question is skipped for someone who has never trained", Q.active({ fitness_level: "never-trained" }).length === 14 && Q.active({ fitness_level: "returning" }).length === 15 && Q.active({}).length === 15);
+const val = (id, v, a = {}) => Q.byId(id).validate(v, a);
+check("age, height and weight ranges", val("age", "12") && !val("age", "21") && val("height", "") && !val("height", "178") && val("weight_current", "40") && !val("weight_current", "170"));
+check("target weight is optional but checked when given", !val("weight_target", "") && val("weight_target", "5") && !val("weight_target", "175"));
+check("a name is required", val("name", "  ") && !val("name", "Brennan"));
+check("limitations need an answer ('None of these' counts)", val("limitations", []) && !val("limitations", ["none"]) && !val("limitations", ["knee", "wrist"]));
+check("weekdays must match the day count, and the error says how to fix it", val("weekdays", ["Mon", "Tue", "Thu"], { training_days_per_week: 4 }) === "Pick exactly 4 days. You picked 3." && !val("weekdays", ["Mon", "Tue", "Thu", "Fri"], { training_days_per_week: 4 }));
+check("Rana's words use the name after the first question", Q.byId("goal").prompt({ name: "Brennan" }) === "Okay Brennan, the big one. What are you training for right now?" && Q.byId("weekdays").prompt({ training_days_per_week: 4 }) === "Which 4 days work best around your classes?");
+check("the days helper names the recommended counts for the level", Q.byId("days").helper({ fitness_level: "returning" }) === "3 or 4 days suits lifters getting back into training. Pick what fits around your classes; any option works.");
+const qProfile = Q.toProfile({ name: " Brennan ", age: "21", height: "178", weight_current: "170", weight_target: "", limitations: ["none"], training_days_per_week: 4, training_weekdays: ["Mon"], starting_lifts: { bench: { skipped: true } } });
+check("answers become a profile: numbers, no 'none' limitation, a trimmed name, no empty target", qProfile.name === "Brennan" && qProfile.age === 21 && qProfile.weight_target === null && qProfile.limitations.length === 0 && qProfile.starting_lifts.bench.skipped === true && Boolean(qProfile.created_at));
+check("lift names read well in a sentence", Q.liftName({ exercise_name: "Barbell Incline Bench Press" }) === "incline bench press" && Q.liftName({ exercise_name: "Leg Press" }) === "leg press" && Q.liftLabel({ exercise_name: "Barbell Back Squat" }) === "Back squat");
 
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

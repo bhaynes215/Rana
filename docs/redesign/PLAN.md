@@ -419,6 +419,14 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 - A never-trained run skips lifts.
 - The profile saved has numbers, not strings, and the `starting_lifts` keys match `mainLifts`.
 
+**As built (Phase 3):** `js/core/questions.js` holds the 15 definitions (plus `active()`, `toProfile()`, `liftName()`, `liftLabel()`); `js/pages/onboarding.js` is the generic renderer; `css/pages/onboarding.css` is the page's small stylesheet. Differences from the text above:
+- The weekday and limitation questions use the new `compact` option variant (two columns), not full-height cards.
+- The lifts target line reads "Your first {lift} target will be {target} lb. You'll see it on your Progress page." (a "lift verb" can't be generated for every exercise). Bodyweight lifts say "...{target} reps in one set...".
+- The weight error says "Enter a weight between 1 and 1,000 lb." (0 would make it a bodyweight lift). The skip button on the optional target weight is "Skip for now".
+- The footer's room under the content is set per question by the script (`has-footer`, `has-footer--tall`), so auto-advancing questions reserve nothing.
+- Lift chips use short sentence-case names ("Incline bench press").
+- Tested on 127.0.0.1: all 15 questions, back/forward/browser-back (answers kept), a never-trained run (14 questions, no lifts, empty `starting_lifts`), validation messages, the saved profile and plan. Tests: section 11 of `scripts/test_leveling.js`.
+
 ### Phase 4: Plan reveal, sign-up, index
 **Delete:** `results.html/.js` and `account-creation.html/.js` (rename via `git mv`, then rewrite), the stat/route/glow reveal code, `PHASE_INFO` HUD styling.
 

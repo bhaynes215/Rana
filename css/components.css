@@ -256,6 +256,11 @@ body.has-tabbar .footer-bar__inner { padding-bottom: var(--space-4); }
 /* Checkbox groups (several answers allowed) use a rounded square instead. */
 .option[role="checkbox"] .option__mark { border-radius: 6px; }
 
+/* Compact card: a shorter option for lists of many (weekdays, limitations). */
+.option--compact { min-height: 56px; padding: 8px 16px; }
+.option--compact[aria-checked="true"] { padding: 7px 15px; }
+.option-grid > .option--compact:last-child:nth-child(odd) { grid-column: 1 / -1; } /* an odd one out spans the row */
+
 /* Number tile: an option card for "3 days": a big number, a word, a tag. */
 .option--tile { flex-direction: column; align-items: flex-start; gap: 6px; height: 128px; padding: 16px 18px; }
 .option--tile[aria-checked="true"] { padding: 15px 17px; }
