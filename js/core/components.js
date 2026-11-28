@@ -1,8 +1,7 @@
 // Visual components: Rana, speech bubbles, progress bars, option cards, the
 // collapsible, form fields, chips, the set table and the week displays.
 // They extend the `Rana.ui` object that ui.js creates, so load ui.js first.
-// Their CSS is in css/components.css; the specs are in
-// docs/redesign/handoff/components.md.
+// Their CSS is in css/components.css.
 //
 // Every component is a function that RETURNS A DOM ELEMENT. Where a component
 // has something that changes (a progress value, a selection, an error), the

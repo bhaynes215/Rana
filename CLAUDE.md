@@ -1,233 +1,119 @@
 # Rana — Fitness Coaching App
 
-**v1 PRD:** `rana-prd-v1-910` — approved 2026-09-11, supersedes the sections below where noted. See especially the decision log (§2) and open questions (§13).
+_Current-state document. Last updated 2026-11-29, after the redesign. Git history holds the old dated changelog._
 
 ## What this is
-A web app (not native mobile) that gives college students a structured workout plan based on their goals and available equipment. Built by a fitness expert who is new to coding — I am learning as we build, so favor clear, simple code over clever code, and explain non-obvious choices in comments or in your responses.
+A web app (not native mobile) that gives college students a structured workout plan from their goal and training days, then tracks their lifts. **Rana is the coach**: a cartoon of the user (Brennan, a fitness expert) who lives in the app and talks through speech bubbles. The student is the trainee.
 
-## Current status
-_Last updated: 2026-11-28 (tab bar, two plans, Account page)_
+Built by someone new to coding, who is learning as we build. Favor clear, simple code over clever code, and explain non-obvious choices in comments and in your answers. Vanilla HTML, CSS and JS only: no frameworks, no build tooling.
 
-**2026-11-28: Bottom tab bar, two plans (Rana's + your own), and an Account page**
-- **Tab bar** (`nav.js`): Home, Plan, History, Account. Shown on the dashboard, Plan, History, Account, session detail and the logbook summary. **Not** shown on the questionnaire, results, sign-up, logging screen or plan builder (focused tasks). History lost its "← Dashboard" link and its All / Suggested / Freestyle filter (removed as pointless; each row's tag already says the kind: Suggested, Your plan or Freestyle).
-- **Two plans, one active.** `rana:v1:saved_plans` holds `rana` (the suggested split) and optionally `own`. `rana:v1:plan` is still "the active schedule" every screen reads, now with `active_plan_id`. **Set active** (`Rana.plan.activatePlan`) copies a plan into it. `plan.split_id` always stays Rana's split.
-- **Your own plan = days only** (`plan-builder.html/.js`): each weekday is Rest or Training, and a training day just gets a name (Push, Arms…). It can have 1–7 days. On that day the dashboard shows the name with **Start workout**, which skips session detail and opens an **empty** logging screen where you add exercises with the picker (stored as `workout_id: "OWN_WORKOUT"`, `type: "planned"`). It counts as following the plan (session XP, streak grows) with **≥ 3 sets** (`FREESTYLE_MIN_SETS`). There's one own plan for now. It can be edited, or deleted while not active.
-- **Switching plans never rewrites past XP.** The plan keeps `schedule_history` (`effective_from` + week). `getSessionForDate` uses the week in effect on each date (`Rana.plan.scheduleFor`). A switch starts today, or **tomorrow if you already started or finished a workout today**. Plans saved before this have no history and behave as before. `repairPlan` now also fixes removed workouts inside the history and leaves own-plan days alone.
-- **Plan tab** (`my-plan.html/.js`): both plans as cards (ACTIVE tag / Set active). Rana's days open to show their exercises. The shared week list is `plan-view.js`, also used by the results screen.
-- **Results screen:** "Build your own plan" under the split. Once it's built, both plans show with "Start with…", and lock-in starts whichever is active. The 12-week route follows the active plan (an own plan has no deload).
-- **Account page** (`account.html/.js`): name, level, tier and earned titles at the top (no "Character" label, user found it too gamey), email (sign-up now saves it, never the password), a disabled Sign out ("coming with real accounts"), and every questionnaire answer with Edit. Changing **goal** or **training days** re-picks Rana's plan after a confirm. Training days and weekdays are edited together (3–6). If your own plan is active, it stays active.
-- Tests: `node scripts/test_leveling.js` has a new section 7 (switching keeps past days identical, own-plan XP rules, saved-plan migration, repair). Verified in the browser on 127.0.0.1 with no console errors: build from results → lock in → Set active on the Plan tab → own-plan day logged (+105 XP) → switch back (XP unchanged, starts tomorrow) → Account edits → delete → phone width.
-
-**2026-11-27: The Intelligence (INT) stat is gone — only STR, AGI and VIT remain.** Removed from the stats calculation (`computeStatPoints`, `computeProjectedStats` in `game.js`), the dashboard status matrix, the session-complete stat gains, the (i) explanations, and the "planned sessions completed" count that only fed it. Following the plan is still rewarded, through the streak boost in XP. This also closes PRD open question §13.3's INT half (calibration graduation is still open). The PRD and the design mockup still show four stats; they're historical.
-
-**2026-11-27: Discard (and every other "are you sure?") now works everywhere**
-- The Discard button on the logging screen did nothing in the Claude app's built-in browser, because the browser's own `confirm()` popup is blocked there and just answers "no". All six popups (discard on the dashboard and logging screen, finishing under half the sets or under 3 freestyle sets, deleting a workout, removing every set while editing) now use **`Rana.ui.confirm`** (`ui.js`): a box drawn inside the page with Cancel and a named action button. Cancel is focused first, and Escape or a tap outside cancels. **Don't use `window.confirm`/`alert`/`prompt` in this app.**
-
-**2026-11-26 (night): How splits are assigned, rebuilt**
-- **Goal first, then days** (`SPLIT_FOR` in `plan.js`, a plain table): build muscle / lose fat → 3 days PPL (Push A, Pull A, Legs A), 4 Aesthetics, 5 Hybrid, 6 **PPL + Arnold**; get stronger → **Upper/Lower** at every day count; general fitness → 3 days Full Body, 4–6 Upper/Lower. The old points-based scoring is gone. Someone training N days gets a split's **first N days**.
-- **Upper/Lower now covers 3–6 days** with two new days you can edit in the workbook: **Upper C** (Barbell Bench, Barbell Row, Cable Lateral Raise, Reverse Pec Deck, DB Hammer Curl, EZ-Bar Skullcrusher) and **Lower C** (Conventional Deadlift, Machine Hack Squat, Seated Leg Curl, Leg Extension, Standing Calf Raise). 3 days = Upper A, Lower A, Upper B; 4 adds Lower B; 5 adds Upper C; 6 adds Lower C. Renamed "Upper / Lower (3-6 Day)".
-- **New split `SPLIT_PPL_ARNOLD`** (6 days, deload every 4 weeks): Push A, Pull A, Legs A, then the three Arnold days. It **reuses** those days instead of copying them, through a new optional `workout_ids` column on the workbook's `splits_overview` sheet (documented in the workbook README). Editing Push A changes it in both splits. The build gives every split an ordered `workout_ids` list in `data/splits.json`; `data.js` uses it.
-- **Fitness level no longer picks the split.** It only tags day counts as **Recommended** on the days question (`RECOMMENDED_DAYS` in `plan.js`): never trained 3 and 4, returning 3 and 4, training consistently 4 and 5. Every option stays pickable. The results summary line now shows your own level, not the split's.
-- **Optional abs section** at the end of every suggested workout ("Abs · Optional, recommended", 2–3 sets of 10–15 reps): Ab Wheel Rollout, Hanging Leg Raise, Cable Crunch, Captain's Chair Knee Raise, Dead Bug, Reverse Crunch, minus any the day already uses (Aesthetics Legs still has Hanging Leg Raise as an assigned exercise, so it offers 3). Listed on the session preview; on the logging screen tap one to add it, then log like a freestyle exercise. Ab sets earn strength XP but don't count toward finishing the suggested workout.
-- **Saved plans repair themselves** (`Rana.plan.repairPlan`, run every time the data loads): if a saved plan points at a split or day that no longer exists, the split is re-picked from the saved questionnaire answers, keeping the same weekdays and start date. Your own Anterior/Posterior test plan became Upper/Lower 6 days this way.
-- Data now: **7 splits, 27 workout days, 144 slots, 94 exercises.** Verified in the browser: the lookup for all 16 goal/day combinations, the Recommended tags, the abs section (preview and logging), the repair, and the results page and dashboard.
-- **For you as the coach (not changed):** with your current days, the 3-day muscle plan gets 3 chest sets a week (Push A's only chest exercise is the bench); Upper/Lower A and B have no flat bench or hinge (only the C days do, so 3–4 day lifters never deadlift); and most splits have no hinge and no glute work. Change them in the workbook whenever you like.
-
-
-**2026-11-26 (later): The program content was rewritten by hand in the workbook**
-- **You wrote every workout day yourself** in `exercises_master` (1–2 compounds first, then accessories). Changed names were marked "(rana)"; they were then converted to standard library names, and each changed row's other columns (muscle, equipment, movement pattern, prescription, alternatives) were filled in from where that exercise was already programmed. Days now have 4–7 exercises.
-- **Anterior/Posterior is gone** from the product (workbook, data, README). There are now **6 splits, 25 workout days, 133 slots** (`data/slots.json`: 133 slots / 398 options).
-- **The 6-exercises-per-workout cap is removed.** The build keeps every exercise you wrote. **The 3-sets-per-exercise cap stays** (confirmed). Session lengths are now estimated from each day's sets (sets × (45 s + rest)) plus 15 minutes for warm-up and moving between exercises (`scripts/library_rules.py`).
-- **Exercise library edits:** removed Deficit Push-Up, Dumbbell Pullover, Weighted Plank, 45-Degree Back Extension and Arnold Press (now **94 exercises**). Renamed Weighted Pull-Up → **Pull-Up** and Weighted Chest Dip → **Chest Dip** (add weight if you use it; 0 means bodyweight), and Lat Pulldown (Wide Pronated) → **Lat Pulldown**. Their `exercise_key`s did not change, so logged history still links up.
-- **No core work is assigned in any day any more.** Abs are planned as an optional section at the end of every suggested workout (not built yet).
-- **New questionnaire question (built):** "Where do you usually train?" — Rec center / Commercial gym / Apartment gym, between limitations and training days (14 questions now). It is saved to the profile as `gym_type` and **deliberately changes nothing**: every exercise has swap options, so any of these gyms can run the same program. You chose this over equipment-based plans, so locked decision #4 still holds for the plan itself.
-- **Decided but not built yet:** nothing from this session's list is left; see "How splits are assigned, rebuilt" above.
-- _(Fixed the same night: plans whose split was removed now repair themselves.)_
-
-_Superseded below: the 6-exercise cap and the coverage side effects it caused._
-
-**2026-11-26: Program caps, number-only set boxes, and (i) explanations**
-- _(Superseded later the same day: the 6-exercise cap was removed when you rewrote the days by hand; the 3-set cap remains.)_ **Every program workout is capped at 3 sets per exercise and 6 exercises per workout** ("I prefer 3 intense sets over 4 easier sets"). The rule lives in `scripts/library_rules.py` (one place); `scripts/build_library.py` applies it when generating `data/*.json` and `scripts/validate_library.py` checks it, so it survives any rebuild from the workbook. The workbook itself still holds the full, uncapped lists. Result: 72 slots cut to 3 sets (a ceiling: slots already at 2 stay at 2), 19 slots dropped (each too-long workout's last accessory, since the workbook lists exercises in priority order), and every workout is now 6 exercises and at most 18 sets. Session and split length estimates were recomputed (e.g. Upper/Lower now ~50 min, was ~65). Freestyle workouts are **not** capped.
-- **Side effect to review as the coach:** dropping the last accessory removes direct **core** work from 5 of 7 splits (Core exercises: 9 slots before, 2 now), **triceps** from Upper/Lower and Anterior/Posterior, **biceps** from Anterior/Posterior, and **calves** from Full Body. Core is still available as a swap option or in freestyle. The Arnold split's description still says "80+ minute sessions" (workbook text).
-- **Set boxes are number-only text boxes** (`Rana.ui.numericField` in the new `ui.js`): no up/down arrows, no scroll-wheel changes, digits (and one decimal point for weight) only, numeric keypad on phones. Used on the logging screen and in the workout editor. The questionnaire's boxes are unchanged.
-- **(i) info buttons** (`Rana.ui.infoButton`): next to **RPE** on the workout detail and logging screens (what it means, with a 10/9/8/7 scale), and next to each of **STR / AGI / VIT** in the status matrix (what the stat is and what raises it). The RPE line is now built in one place (`Rana.ui.prescription`) instead of separately on two screens.
-
-**2026-11-25: Workout history, fixing mistakes, and a dashboard redesign**
-- **Workout history** (`history.html`/`history.js`): every finished workout, suggested and freestyle, newest first, grouped by month, with a summary line ("14 workouts · 11 this month · 304 sets logged"). Each row shows date, name, kind, duration, exercises, sets and the XP that workout earned (`Rana.game.xpForSession`; the rows always sum to total XP). Opened from the dashboard's "Workouts" tile. No search and no logging for past days, by decision.
-- **Opening a workout from the history** shows its summary in "logbook" mode (`session-complete.html?…&from=history`): final state immediately, no replayed animation, no level-up cards.
-- **Fixing mistakes:** "Edit" on any summary lets the user change a set's weight/reps, remove sets (with Undo), or delete the whole workout. Every set now has its own `set_id` (older sets get one automatically). XP, levels and stats recalculate from what's saved, so a correction can lower a level that a typo inflated. That's deliberate: "levels never go down" means never from training or resting, not from correcting your own data. Without this, a typo like 1000 lb would be that exercise's "best" forever.
-- **Dashboard redesign:** reads top to bottom as today's suggested workout → this week → stats. The top bar is now two compact rows on phones (name/title/tier + a tier-colored level badge, then XP and recovery meters side by side) and one row on wide screens. The workout card has a date chip, big inline stats, a proper pull-quote on rest days, and the buttons grouped at the bottom with room above them (the quote used to sit cramped against the button). Wide screens: workout + week on the left, stats on the right.
-- **Type and spacing system** (all screens): body text moved from Inter to **Barlow**, and small uppercase labels to **Barlow Semi Condensed**. Chakra Petch stays for headings and numbers. There's one spacing scale (`--space-1`…`--space-7`), and the primary/secondary buttons were restyled (uppercase, notched outline for secondary). This **deviates from PRD §10's Inter**, at the user's request (the old look read as "basic"). Also a global `[hidden] { display: none !important }` rule, so `hidden` always wins.
-
-**2026-11-25: Workout-first update** — Rana is a workout app first and a social app second, so the work moved to the workouts themselves (Supabase, a live URL and the social features come later):
-- **The plan is a suggestion, not a rule.** The dashboard card reads "Today's suggested workout." On a rest day it shows "Rest," the quote, and a quieter **"Start a workout anyway"** button underneath. On a training day it shows the main "Start session" button plus a smaller **"Do something else."** Following the plan is rewarded through the streak boost, not enforced. This reverses locked decision #1.
-- **Freestyle workouts:** name it (prompt defaults to "Freestyle · Wed, Nov 25"), then add any exercise from the library with the **exercise picker** (`exercise-picker.js`): search plus seven muscle groups (Chest, Back, Shoulders, Biceps, Triceps, Legs, Core), multi-select, "Add 3 exercises." Add as many sets as you like. No custom exercises and no supersets (both deliberately not built).
-- **Session records** (`storage.js`): every workout, suggested or freestyle, is a **session** (id, date it started, type `planned`|`freestyle`, title, workout_id, started/finished times, freestyle exercise list, difficulty). Sets point to their session by `session_id`. Sessions and sets are separate lists on purpose: they become two tables in Supabase later. A session exists from the moment you tap Start and is "in progress" until Finish, so closing the tab loses nothing: the dashboard shows **Resume / Discard**. Only one workout can be in progress at a time. Only **finished** sessions count toward XP, stats and recovery. Older data (sets with no `session_id`) migrates automatically into finished sessions.
-- **One storage module again:** `js/storage.js` is now `js/dashboard-state.js`, which reads through the root `storage.js`. The "two places that touch localStorage" caveat below no longer applies.
-- **Limitations shape the suggested workout only.** `data/exercise_limitations.json` tags exercises with the joints they load (knee, shoulder, lower-back, wrist). For each slot of a suggested workout, the first option that avoids the user's limitations is chosen, never repeating an exercise already in that workout. If every option conflicts, the main exercise stays with a yellow caution note ("Go light or skip it if it bothers you"). Freestyle, the picker and the swap buttons always offer everything.
-- **New XP rules** (full table in `docs/leveling-system.md`): the suggested workout done as prescribed earns session XP plus the streak boost and **grows** the streak. Freestyle (or a cut-short suggested workout) on a training day with at least 3 sets earns flat session XP and **holds** the streak. Any workout on a rest day earns **no session XP** (strength gains still count), so the game never rewards skipping rest. Session XP is earned at most once per day.
-- **Game-style summary** (`session-complete`): workout recap (every exercise and set, ★ on each new best), then the XP lines landing one at a time with a counting total. Gains of 5%+ get a **NEW RECORD** banner and screen flash, hitting the 60 XP cap adds **MAX GAIN**, the streak shows as an **ADHERENCE ×1.35** combo, and the level bar fills at the end, with the level-up or tier-up card if crossed. Tap to skip; reduced-motion users get the final state immediately.
-- Tests: `node scripts/test_leveling.js` now also covers the rest-day, freestyle, once-per-day, in-progress/finished, discard, migration and limitation rules.
-
-**2026-11-25: Analysis (results) page redesigned** — the stat bars are gone. Top to bottom:
-1. **Your split:** the headline panel, with a brighter border and glow. It shows the split name, a summary line (days/week, session length, goal, experience level), the full Mon–Sun week with each workout and its focus on its fixed weekday (rest days listed, never blank), and the split's own "Built for" line.
-2. **Your 12-week route:** tier milestones (diamonds in each tier's color) over a week-by-week phase track: calibration (weeks 1–3), build, and the split's own deload weeks from `deload_every_weeks` in `data/splits.json` (every 4, 6 or 8 weeks depending on the split).
-   - The headline level is a **floor**, labeled "at least." It comes from the new `Rana.game.forecastRoute()` and counts consistency XP only, since strength gains can't be predicted.
-   - Example: a 4-day plan forecasts at least Level 13 (Awakened) by week 12.
-3. Quote, then calories/macros and the disclaimer, then the lock-in button. The reveal animation follows this order.
-
-**2026-11-25: Leveling system rebuilt** — full design in `docs/leveling-system.md`; summary:
-- **No cross-user "overall" rating.** Considered (an NBA-2K-style 60–99 OVR) and rejected: comparing absolute ratings between friends could be unhealthy. Levels are self-relative and everyone starts at Level 1.
-- **XP comes from only two sources** (no more 10 XP per prescribed set):
-  - **Strength increases:** beating your all-time best estimated 1RM (weight × (1 + reps ÷ 30)) on an exercise earns 10 XP per 1%, capped at 60 per exercise per session. Only sets of ≤15 reps count. The first 3 sessions of each exercise are calibration (baseline only). Bodyweight sets (0 extra weight) compare reps instead. Each `exercise_key` keeps its own record.
-  - **Consistency:** 100 XP per completed session (≥ half the prescribed sets logged), plus a streak boost of +5% per consecutive session, capped at +50%. Rest days don't affect the streak; a missed session **halves** it rather than resetting.
-- **Level curve:** XP to reach level n = 44 × (n − 1)². Tuned by simulation (`scripts/test_leveling.js`) so Level 50 (Mythic) takes ~3 years at 4 consistent days/week. The first estimate (47) landed at Level 48.
-- **New tiers:** Spark (1) → Ignition (5) → Awakened (13) → Ascended (22) → Transcendent (36) → Mythic (50). Each has its own glow color.
-- **All three stats (STR / AGI / VIT) start at 0** — no starting stats from the questionnaire. _(INT was removed 2026-11-27.)_
-- **Session complete** shows an XP breakdown, an animated level-up "title card" and a tier-up "transformation" (still frames under reduced motion), plus a "what powered this" line. **Earned titles** (The Unbroken, Limit Breaker, Iron Will, Centurion) show under your name on the dashboard.
-- **Fixed a live bug:** the old `totalXp()` grouped sets by slot instead of by date, so every session after the first of each workout day earned 0 XP.
-- `scripts/test_leveling.js` runs the real `game.js` in Node: a 3-year simulation plus rule checks. Run it with `node scripts/test_leveling.js` from the project folder.
-
-**2026-11-25: Sign-up requires a school (.edu) email** (`account-creation.js`). Browser-only for now, so it only catches honest mistakes; real enforcement (server-side check + verification email) comes with Supabase. Later, people will be able to see others at their own school (grouped by email domain) — opt-in, showing name, level and tier only.
-
-**2026-09-13: Dashboard rebuilt against `rana-dashboard-mockup.html`** (a design reference you added at the project root, not `design/` — PRD §7 game system + §10 visual system). New layout: persistent `position: sticky` vitals bar (identity/tier/XP/recovery/level) that never scrolls away, a left-aligned session card where the day name is the largest text on the page (the old "Welcome back" greeting is gone), a status matrix comparing current stats to the 12-week target (not next-level progress), and a microcycle strip using one cell shape for all seven days with state carried by border color and marker fill only. Two columns above 760px, one below.
-
-This introduced a **second** localStorage-reading module (`js/storage.js`), which was merged on 2026-11-25: it is now `js/dashboard-state.js` and reads through the root `storage.js`. It exposes one function, `Rana.dashboard.getDashboardState()`, and falls back to a "Day 1" fixture (matching the mockup's own toggle-state data) with a `console.warn` when there's no active plan yet, rather than redirecting away like the dashboard used to.
-
-Bug caught by actually running it in a browser (not just reading the code): the mockup's own label-truncation approach turned "Shoulders + Back (V-Taper Day)" into "SHOULD" — read like a typo, not an abbreviation. Fixed by shortening the truncation to 4 characters.
-
-**The rest of the PRD build order (§3) was done as a first pass on 2026-09-11** — every screen in the v1 flow exists, is wired to real data, and has been driven end-to-end in a real headless browser (Playwright) with zero console errors: 13-question questionnaire → results/projection with a reveal animation (stat bars at the time; redesigned 2026-11-25) → account creation → dashboard reading a real assigned plan → session detail → active session with logging and exercise swap → session complete with XP/stat/tier-up. Three real bugs were caught and fixed only by actually running it (not just reading the code) — see "Bugs found by testing, not reading" below. **This is a first pass, not a polished/reviewed release** — see "Needs your review before this is trustworthy" below for what's still a placeholder judgment call rather than a confirmed decision.
-
-New shared modules (no build tooling, plain `<script>` tags, everything hangs off a `window.Rana` namespace): `data.js` (fetches/caches `data/*.json`), `storage.js` (the one file that touches `localStorage`), `plan.js` (split-matching + the fixed weekday→workout schedule), `game.js` (stat/XP/tier/calorie math). `styles.css` was fully rewritten to the PRD's dark "system HUD" visual system (§10) — every screen now uses it, not just new ones.
-
-### Bugs found by testing, not reading
-All three were invisible from reading the source — they only showed up once the app actually ran:
-1. `index.html`'s inline redirect script ran before its `defer`red `storage.js` had executed (`defer` only orders *deferred* scripts against each other, not against a following inline script) — threw "Rana is not defined" on every load. Fixed by removing `defer` from that one script tag.
-2. Every exercise object's name field is `exercise_name` (matches `data/exercises.json`'s actual schema), but `session-detail.js` and `active-session.js` read `.name` — every exercise on those two screens rendered as "undefined". Fixed all three call sites.
-3. `.set-row`'s CSS grid let a number input's intrinsic content width push its `1fr` track wider than it had room for (grid items default to `min-width: auto`) — the row silently overflowed the phone-width viewport and the "Log" button rendered off-screen, unclickable. Fixed with `min-width: 0` on the inputs.
-
-A fourth issue was a logic bug, not a wiring bug: `Rana.plan.getSessionForDate` marked every training weekday earlier in the current calendar week as "missed" on a brand-new plan, even days before the plan's own `start_date` — a first-time user would open the dashboard and immediately see red "missed" marks for workouts that were never scheduled. Fixed by checking `dateStr < plan.start_date` and introducing a neutral `not-started` week-strip state instead.
-
-### Needs your review before this is trustworthy
-Flagging these explicitly rather than letting them look finished:
-- **The 43 new exercise-library entries** (`scripts/build_library.py`'s `NEW_ENTRIES`) are drafted with standard exercise-science classifications, not reviewed by you.
-- **`data/quotes.json`'s wording** is drafted from memory, not checked against the actual George Long (1862) / Long-Higginson public-domain texts — verify before shipping, since the PRD's whole reason for specifying those translators is copyright safety.
-- **`game.js`'s projected-stat and calorie/macro formulas are first-pass inventions**, not from the PRD (it describes what they should depend on, not the math). Marked with comments in the file. (Baseline stats were removed 2026-11-25.)
-- **The leveling numbers are placeholders to tune with real data** — all in `XP_RULES` at the top of `game.js`: 100 XP/session, +5%/session streak capped at +50%, 10 XP per 1% strength increase capped at 60/exercise, 3 calibration sessions, ≤15 reps counted, curve factor 44. Observed in testing: early on, a beginner improving every exercise can earn 300+ XP from strength in one session (there's no per-session cap, only per-exercise) — intended as "beginner gains," but worth watching.
-- **Earned-title names and thresholds** (`TITLES` in `game.js`) are placeholders.
-- **Deload weeks are shown but not prescribed.** The analysis page's 12-week route marks the split's deload weeks, but the session screens prescribe the same sets and rep targets every week. Either make deload weeks actually lighter (your call on what "lighter" means), or drop deload from the route until that exists.
-- **PRD open question §13.2 (focus area) was resolved as "advisory only"** — `plan.js`'s split matcher doesn't use `focus_area` at all, it's just saved to the profile and could be surfaced in copy later. The other 3 PRD open questions (§13.1, §13.3, §13.4) are still genuinely open — see "Open questions" below.
-- **Split matching is a goal + days table** written by you (`SPLIT_FOR` in `plan.js`, 2026-11-26), not the PRD's literal "4 goal templates". Change it there if the assignments should change.
-- **Height is collected in centimeters only** — the PRD's ft/in-or-cm option wasn't built, kept it to one unit for a first pass.
-- **Session detail / active session only work for *today's* date** — no browsing/logging past or future sessions yet, intentionally, to keep the first pass scoped.
-- **Suggested workouts have no "add an extra set"** (freestyle does), and finishing one doesn't require all prescribed sets (under half just doesn't count as following the plan, and the app asks first).
-- **`data/exercise_limitations.json` is a DRAFT** (tagged from standard exercise-science reasoning, not reviewed by you). Findings from real data (measured before the 2026-11-26 rewrite, so the slot counts are out of date): a **knee** limitation never swaps anything, because every slot's alternatives are also knee-dominant (29 of 174 slots get a caution note instead); **shoulder** tags are broad (56 slots have no shoulder-safe option and get a caution, only 6 swap); **lower back** swaps 14 slots and cautions 10; **wrist** swaps 28 and cautions none. Tune the tags, or add safer alternatives to the slots, to change this.
-- **Placeholder numbers for the new rules:** freestyle minimum 3 sets, NEW RECORD at +5% (`FREESTYLE_MIN_SETS`, `NEW_RECORD_PERCENT` in `XP_RULES`).
-- **Not tested in a browser:** the reduced-motion version of the summary and the picker at very small phone widths.
-
-_Superseded below — kept for history:_
-- Toolkit is set up (VS Code, terminal basics).
-- `index.html` exists (placeholder "hello world" page, now with proper `<meta charset>`/viewport tags and linked to `styles.css`).
-- Three screens now exist and are connected in one direction: `onboarding.html` → `account-creation.html` → `dashboard.html`, navigated with plain `window.location.href` (no framework router). There is no back navigation from the dashboard — this flow is one-directional for now.
-- `onboarding.html` is built and interactive. Contains all required fields: name, height, weight, goal (radio group, 4 placeholder options — not final, see below), equipment access (radio group: dorm / rec center / full gym), days-per-week (`<select>`, 2–6), and split options grouped by day count (`.split-group[data-days="N"]` divs). `onboarding.js` filters these groups to show only the one matching the selected day count, and clears a split selection if its group is hidden.
-- `onboarding.js` handles split filtering (above) and the Continue button: prevents the default page-reload submit, validates required fields, shows an inline confirmation/error message (`#onboarding-status` in the HTML, `.status-message` in CSS), and — on success — navigates to `account-creation.html`. Answers are still only `console.log`ged, not saved or passed forward — that's roadmap step 5 (localStorage).
-- Goal handling in the JS is intentionally generic — it reads whichever `goal` radio is checked via `FormData`, with no hardcoded count or list of values, so the placeholder 4 goals can change without touching `onboarding.js`.
-- `account-creation.html` + `account-creation.js` are built. Email + masked password field, Continue button. Validation: both fields non-empty, email checked against a deliberately loose "shape" regex (not RFC-strict — see comment in the JS). **This screen is intentionally non-functional**: no auth service, no backend call, no user record is created, and the password is never stored or logged. Continue advances to `dashboard.html` regardless of what was actually typed, as long as basic validation passes. To be upgraded into a real signup once the data layer is built.
-- `dashboard.html` + `dashboard.js` are built, **placeholder-level with hardcoded data** (no data layer, no state, no persistence). Three sections: header (live date via `Date`/`toLocaleDateString`, hardcoded greeting name), today's workout card (day type + Start button, full prominence, minimal by design), and a 7-day weekly strip (`completed` / `today` / `upcoming` / `rest` states, rest days affirmatively marked, never a blank cell). The Start button is a real, full-strength button that is currently inert — there's no workout detail screen yet to send it to; the one line to change is commented in `dashboard.js`. A temporary `#demo-toggle` button lets both today-card states (training/rest) be previewed without editing code — it's marked `data-demo-only` and should be deleted once the dashboard reads a real plan.
-- `styles.css` is built — single shared stylesheet, mobile-first, plain CSS (no framework). Styles `index.html`, `onboarding.html`, `account-creation.html` (reuses onboarding's `.onboarding`/`.field`/`.btn-continue`/`.status-message` classes), and `dashboard.html` (new `.dashboard`, `.today-card`, `.week-strip` sections).
-- Git repo initialized and pushed to GitHub (`github.com/bhaynes215/Rana`, remote `origin`, branch `main`).
-- No data storage, no deployment yet.
-- **2026-09-11: v1 PRD approved (`rana-prd-v1-910`).** It supersedes several assumptions above and below: equipment tiers are cut from the product entirely, onboarding is being rebuilt as a one-question-per-screen questionnaire (not extended incrementally), a new Results/projection screen is added before account creation, a full stat/XP/tier game layer is added, and exercise references move to a keyed library. See "Product scope — v1" below for the reconciled picture.
-- **2026-09-11: Exercise library repair done (PRD §4).** `scripts/build_library.py` reads `workout-data/workout_splits_database.xlsx`, merges the original 56 `exercise_library` rows with 43 newly authored entries and 8 confirmed alias resolutions (naming drift, e.g. "Hack Squat" → the existing `hack_squat` entry — not new exercises), and exports `data/exercises.json` (99 keyed entries at the time; 94 since 2026-11-26), `data/splits.json`, `data/workouts.json`, and `data/slots.json` (174 slots / 522 slot_options at the time; 133 / 398 since the 2026-11-26 rewrite — each `exercises_master` row became one slot with its primary + 2 alternatives as ranked `slot_option`s). `scripts/validate_library.py` is the standalone, dependency-free check the PRD asked for — it confirms every `slot_option.exercise_key` resolves against `exercises.json`, that the program caps hold, and that no workout repeats an exercise, and fails loudly (non-zero exit, lists every problem) otherwise; not yet wired into a pre-commit hook or CI, just runnable on demand. **The 43 new entries are a first draft** — drafted with standard exercise-science classifications matching the existing library's voice, but not yet reviewed by the fitness expert (see `scripts/build_library.py`'s `NEW_ENTRIES`, or `data/exercises.json`).
-
-### Next pass
-The PRD's build order (§3) — library repair through account creation restyle — is done as a first pass (see "Current status" above). What's actually next:
-0. **⏰ Reminder — per-exercise history (agreed follow-up, 2026-11-25):** tap an exercise and see every session it was done, its sets over time, the all-time best and a progress trend. Deliberately deferred while the workout history was built; the user asked to be reminded.
-1. **Splits and workout assignment — built 2026-11-26** (see Current status). Still placeholders: focus area being advisory-only, deloads that are shown but not prescribed, the draft limitation tags, and no A/B-week rotation (a 3-day PPL user only ever does the A days). Coaching gaps to look at in the workbook: chest volume on 3-day PPL, no flat bench or hinge on Upper/Lower A and B, few hinges and almost no glute work overall.
-2. **Fitness-expert review pass** — work through "Needs your review before this is trustworthy" above, especially the 43 new library entries, the invented projection/calorie formulas, and the leveling placeholder numbers.
-3. **Resolve the remaining 3 PRD open questions** (§13.1 under-18, §13.3 calibration graduation, §13.4 session length) — see "Open questions" below.
-4. **Expand session detail/active session beyond "today only"** if browsing/logging other dates turns out to matter for real use.
-5. Deploy (free hosting) — still not done, no live URL yet.
-6. Migrate storage off `localStorage` to a real database (Supabase, per the PRD) once the data model has been used for real and any schema gaps show up.
-
-## Locked design decisions
-These were deliberate calls made while building the onboarding → account creation → dashboard flow — don't revisit them without a reason.
-1. **Rest is the suggestion on a rest day, not a lock.** _(Reversed 2026-11-25; it used to say rest days were non-overridable with no start affordance.)_ Rest days still show an explicit "Rest" marker in the weekly strip, never an empty cell, and the card leads with rest, but "Start a workout anyway" is available under the quote. Training on a rest day earns strength XP but no session XP, so rest is never out-rewarded.
-2. **Today's workout card is minimal by design.** It shows only the day type and a start affordance — no exercise list, no movement-pattern slots. That detail belongs on the (not-yet-built) workout detail screen.
-3. **Dashboard → session detail → active session is a deliberate three-way split.** Browsing today's session must not start it. Looking ahead at what's planned and committing to logging sets are different intents and will stay on different screens. (Freestyle workouts and days in the user's own plan go straight to logging, since there's nothing to preview.) (Reinforced, not contradicted, by the PRD's screen inventory — session detail, active session, and session complete are three separate screens.)
-4. **Equipment access is removed from the product, not just the questionnaire** (PRD D1). The plan matrix collapses from 4 goals × 3 equipment tiers to 4 goal templates. This is a reversal of the original scope, which called equipment tier "the key differentiator, don't drop it" — the PRD's own cost callout (§2.1) says v1 now assumes full-gym access, and a dorm-gym user can't run these plans. Equipment may return later as a profile setting, not an onboarding question. _(2026-11-26: a "Where do you usually train?" question was added to the questionnaire, but it is saved only and does not change the plan; equipment-based plans were considered and dropped because every exercise already has swap options.)_
-5. **No Google Calendar in v1**, but the fixed-weekly-schedule rule stands unchanged: a missed day is marked "missed," never silently rescheduled. The data model must not make Calendar hard to add later.
-6. **Exercise references use `exercise_key`** (stable slug), never free-text names. Done — `data/exercises.json` is now the keyed source of truth (see "Current status").
-7. **Calorie/macro targets are display-only.** Shown once on the results screen as part of the projection — no logging, no daily tracking, no nutrition screen. Safety guardrails apply: calorie floor (1,500 kcal men / 1,200 kcal women, clamp don't compute below), rate cap (~1% bodyweight/week, extend timeline rather than raise deficit).
-8. **Levels and stats never decrease; XP rewards getting stronger and showing up — never volume or tonnage.** _(Rewritten 2026-11-25; it used to say every completed prescribed set earns equal XP.)_ XP comes only from (a) beating your own all-time best on an exercise, scaled by % so every lift is treated fairly, and (b) completing sessions, with a streak boost. A deload or cut week earns consistency XP only, so consistency XP must stay meaningful on its own. A deload must never cost XP compared with not training, and holding back to "bank" a later jump must never pay off (that's why increases are measured against the all-time best, not last week). No cross-user strength ratings: levels are self-relative, and everyone starts at Level 1 with all stats at 0.
-9. **Original naming throughout.** The user's own name (from the questionnaire) is the character name. No borrowed character names, rank ladders, or system dialogue. Stoic quotes must use public-domain translations (e.g. Marcus Aurelius via George Long, 1862) — not modern copyrighted translations.
-
-## Build philosophy for this project
-- We are deliberately going slow and building understanding, not just shipping fast. Prefer vanilla HTML/CSS/JS over frameworks for now — no React, no build tooling — until the fundamentals are solid.
-- Static structure first, interactivity later, storage later, deployment later. Don't jump ahead to logic or persistence unless asked.
-- Explain what new code does in plain language when introducing a new concept (e.g. first time using `localStorage`, first `fetch` call, first loop).
-- Once reference data (`data/exercises.json`, `data/splits.json`, etc.) is loaded via `fetch` at startup, double-clicking the HTML file stops working — browsers block `fetch` against `file://`. From that point, testing needs a local server: `python3 -m http.server` from the project folder, then visit `localhost:8000`.
-
-## Product scope — v1
-**Not in v1:** AI-generated plans, Google Calendar, nutrition logging, video, cardio programming, native app, social/leaderboard features (planned for later, once real accounts exist: friends and same-school users see each other's level and tier only — never lifts, bodyweight or streaks; no global leaderboard), **equipment tiers**, real authentication, cross-device sync, notifications, college-specific personalization. These are deferred on purpose — don't suggest adding them. (Equipment tiers moved into this list per PRD D1 — see locked decision #4 above; this is a reversal of the original scope.)
-
-**Flow:** Onboarding questionnaire → results/projection screen → account creation → home dashboard.
-Questionnaire comes *before* signup, so the user sees their plan before committing to an account. The results screen (new in the PRD) is what actually delivers on that — the questionnaire alone doesn't show a plan.
-
-**Onboarding captures** (PRD §8 plus one, 14 questions, one per screen): name, gender, age, height, current weight, target weight (skippable), primary goal, focus area, fitness level, activity level outside the gym, limitations (knee/shoulder/lower back/wrist — used only to pick the suggested workout's exercises; freestyle ignores them), where they train (rec center / commercial gym / apartment gym — saved only, changes nothing), training days/week (starts at 3, not 2 — the lowest split is a 3-day full body), and which specific weekdays. Equipment access is gone (see locked decision #4). Training days and split are still coupled the way rest days and split were before.
-
-**Data model** (keep prescription and record separate — this is intentional, not to be merged; full schema in PRD §5):
-- `exercise` — each exercise defined once, keyed by stable `exercise_key`
-- `split` / `workout_day` — a split's training days
-- `slot` / `slot_option` — replaces flat plan-template exercise rows. A slot is a movement-pattern requirement (e.g. "pulling movement"); `slot_option` lists 2–3 exercises that satisfy it, ranked primary/alternative. This is what makes exercise-swapping actually work.
-- `profile` / `plan` — the user's questionnaire answers and their assigned split/training weekdays/start date
-- `scheduled_session` — a plan's session targeted onto a specific real calendar date
-- `logged_set` — one record per set actually performed, referencing the `exercise_key` actually used (may differ from the slot's primary if the user swapped)
-- `session_feedback` — one-tap difficulty rating per session, feeds Recovery
-
-**Plan structure:** One continuous plan (not week-by-week). It holds the split, training days, and slot skeletons. Sessions generate onto real calendar dates; a 7-day view is just a window into that. A missed day is marked "missed," never silently rescheduled onto another day — this is a fixed weekly schedule (Monday is always push, etc.), not an adaptive queue. The schedule is a **suggestion**: on any day the user can instead start a freestyle workout, and a past training day where they trained something else is shown as "off-plan" (a dashed outline), never "missed."
-
-A training day is a set of movement-pattern slots, compound movements first. Each slot offers a few exercise options (e.g. "pulling movement" → pull-ups or lat pulldowns), so the user has a fallback if equipment is busy — the framing is "the rack is taken," not "you don't own this equipment." Working weights are tracked per specific `exercise_key`, underneath the slot, so swapping to a dumbbell variant doesn't inherit the barbell version's loads.
-
-**v1 plan generation is a lookup, not AI:** goal + training days → a split, from a table you wrote (`SPLIT_FOR` in `plan.js`, 2026-11-26). Someone training N days gets the split's first N days. Fitness level only tags day counts as "Recommended". **Open question (PRD §13.2):** focus area (4 options) needs a decision during build — either it selects A/B day variants within a split, or it's advisory-only and shown back to the user without driving selection. Don't let it silently do nothing.
-
-**Calibration → progression:** Weeks 1–3, the structure is prescribed but load is up to the user to find (no starting weights assumed). Graduation out of calibration happens per movement pattern (roughly 3 logged sessions per pattern), not all at once globally. After graduation: simple rule-based linear progression (e.g. add weight when reps/sets are hit). **Open question (PRD §13.3):** whether this graduation gate ships in v1. INT, the stat it was meant to feed, was removed 2026-11-27.
-
-**Game layer (new in v1, PRD §7):** Three stats — STR, AGI, VIT (the PRD's fourth, INT, was removed 2026-11-27) — rise automatically from logged work (no spendable points, no `[+]` buttons). Each is derived from a distinct real training quality (e.g. STR from heavy compound sets, VIT from total sets done) and grows sub-linearly so early progress feels fast. Everyone starts every stat at 0. XP comes from strength increases plus consistency (see locked decision #8 and `docs/leveling-system.md`, which supersede PRD §7.3's XP formulas) and drives levels and six named tiers (Spark → Ignition → Awakened → Ascended → Transcendent → Mythic). A Recovery meter shows `—` rather than a fabricated number when there's no data yet. Full formulas are in the PRD — don't duplicate them here, read §7 before implementing.
-
-**Visual design (new in v1, PRD §10):** A dark "system HUD" identity — deep black/neon cyan, Chakra Petch for display type (body text is Barlow since 2026-11-25, not the PRD's Inter — see Current status), zero border-radius (notched panels via `clip-path` instead), segmented (not gradient) stat bars, glow via `box-shadow` never blur. Full token list and rationale in PRD §10 — read it before styling new screens rather than guessing at the palette.
-
-## Screens (in build order per PRD §3)
-All seven exist (plus an eighth, the workout history) and are wired together with real data — ✅ done as a first pass, all still wanting the review pass described in "Current status" above.
-1. **Questionnaire** (`onboarding.html`/`onboarding.js`) — ✅ 14 questions (gym question added 2026-11-26), one-question-per-screen (PRD §8): progress indicator, back navigation via `history.pushState` per question, single-choice auto-advance, text/number needs explicit Continue, per-question validation.
-2. **Results / projection** (`results.html`/`results.js`) — ✅ redesigned 2026-11-25: the split leads (its name and full Mon–Sun week), then the 12-week route (tier milestones + calibration/build/deload phases), quote, and calorie/macro display last. Sequenced reveal, skippable on tap, respects `prefers-reduced-motion`, ends in the lock-in button that sets `plan.start_date`. No stat bars.
-3. **Account creation** (`account-creation.html`/`account-creation.js`) — ✅ restyled to the dark HUD system and still intentionally inert (see original note below); since 2026-11-25 it only accepts .edu emails.
-4. **Dashboard (home)** (`dashboard.html`/`dashboard.js`) — ✅ rebuilt 2026-09-13 against `rana-dashboard-mockup.html`: sticky vitals bar, status matrix (current vs. 12-week target), microcycle strip, left-aligned session card with the day name as the largest text on the page. Rebuilt again 2026-11-25 as "Today's suggested workout" (rest-day "Start a workout anyway," training-day "Do something else," a Resume/Discard banner for an unfinished workout, and an off-plan week-strip state). Reads via `js/dashboard-state.js`.
-5. **Session detail** (`session-detail.html`/`session-detail.js`) — ✅ browse-only list of a day's movement-pattern slots with prescription and set counts; deliberately no swap control here (that's active session's job) per locked decision #3.
-6. **Active session / logging** (`active-session.html`/`active-session.js`) — ✅ handles both kinds of workout: the suggested workout (one card per prescribed slot, swap buttons, limitation-aware default exercise) and freestyle (add exercises with the picker, add any number of sets, remove an exercise until a set is logged). Writes each set immediately, tied to its session. Also has Discard, and a difficulty tap on Finish.
-7. **Session complete** (`session-complete.html`/`session-complete.js`) — ✅ also the "logbook" view of any past workout (from the history, no animation), with Edit to fix sets or delete the workout. The game-style summary described under "Workout-first update" above: recap, XP lines with NEW RECORD / MAX GAIN / ADHERENCE moments, level bar, stat deltas, any newly earned title, and the level-up or tier-up card. The one-tap difficulty rating is captured at the end of active session.
-8. **Workout history** (`history.html`/`history.js`) — ✅ added 2026-11-25: every finished workout by month, XP per workout; tap through to the logbook summary. Per-exercise history is the agreed next step (see Next pass).
-9. **Plan tab** (`my-plan.html`/`my-plan.js`) and **plan builder** (`plan-builder.html`/`plan-builder.js`) — ✅ added 2026-11-28: Rana's plan and the user's own (days only), one active.
-10. **Account** (`account.html`/`account.js`) — ✅ added 2026-11-28: name/level/tier/titles, email, editable answers.
-All main screens share the bottom tab bar (`nav.js`).
-
-## Roadmap (check current status against this before proposing a plan)
-1. Toolkit setup — ✅ done
-2. Build one static screen — ✅ done (onboarding.html + styles.css built 2026-09-01; structure only, no JS); extended 2026-09-03 with two more static/placeholder screens, account-creation.html and dashboard.html
-3. Git & GitHub basics — ✅ done (repo initialized, pushed to GitHub at bhaynes215/Rana, 2026-09-01)
-4. Add interactivity (JavaScript) — ✅ done (onboarding.js: split filtering + Continue validation, 2026-09-01); extended 2026-09-03 with account-creation.js (validation) and dashboard.js (date + demo toggle), plus forward navigation wiring all three screens together
-
-**Steps 5–7 below are superseded by the PRD's build order (§3) — see "Next pass" above for what's actually left:**
-5. ~~Exercise library repair~~ ✅ → ~~storage layer~~ ✅ → ~~questionnaire rebuild~~ ✅ → ~~results screen~~ ✅ → ~~dashboard rebuild~~ ✅ → ~~session detail~~ ✅ → ~~active session~~ ✅ → ~~session complete~~ ✅ → ~~account creation restyle~~ ✅ — all done 2026-09-11
-6. Later: fitness-expert review pass, deploy (free hosting), migrate storage to Supabase, equipment access returns as a profile setting (not onboarding), Google Calendar
-
-## Open questions (PRD §13)
-1. **Under-18 users** — still genuinely open. Age is captured and stored but nothing branches on it yet, per the PRD's own instruction to leave this until it's answered.
-2. ~~Focus area's actual function~~ — **resolved 2026-09-11: advisory only.** Saved to the profile, not used by the split matcher. See "Needs your review" in Current status — this was a build-time call, not a discussion with you, so revisit if you'd rather it drove A/B split variant selection.
-3. **Calibration graduation** — still open (INT was removed 2026-11-27, so only this half remains). Partly addressed: strength-increase XP has a per-exercise calibration (the first 3 sessions of each exercise only set a baseline). The specific "graduates per movement pattern after ~3 logged sessions" mechanic from `CLAUDE.md`'s original calibration section isn't implemented as a distinct gate yet.
-4. **Session length** — still open, not asked as a 14th question.
+**PRD:** `rana-prd-v1-910` (approved 2026-09-11). Still the reference for the data model (§5), questionnaire (§8) and open questions (§13). **Superseded:** §7 stats and Recovery (STR/AGI/VIT and Recovery are gone), §7.3's XP formulas (see `docs/leveling-system.md`) and §10 visual design (replaced by the redesign below).
 
 ## How to work with me
-- I'm the fitness expert, not the engineer — defer to me on training/programming questions, but push back if a technical choice I suggest would cause real problems (e.g. data modeling issues, security, unmaintainable structure).
-- I'm new to app development — walk me through *why*, not just *what*, especially for new concepts.
-- Before making changes, use plan mode: read existing files first, propose the plan, wait for approval.
+- I'm the fitness expert, not the engineer. Defer to me on training and programming, but push back if a technical choice would cause real problems (data modeling, security, unmaintainable structure).
+- Walk me through *why*, not just *what*, especially for new concepts.
+- Before big changes, use plan mode: read the files first, propose a plan, wait for approval.
+- **Rewrite, don't layer.** Scrap what isn't needed and build what is. One source of truth, derived state, small pure functions, and delete dead code the moment it is dead. Don't pile new code on old code.
+- Keep only app files in the repo. Review pages and reports go in the scratchpad. Ask before adding docs.
+- Ask before merging `redesign` into `main` and before pushing.
+
+## Look and feel (the redesign, built 2026-11-28/29)
+Light and warm: chalk `#EFF0EB` background, white cards, ink `#24211D`, one marigold accent `#F4A51C`. Bricolage Grotesque for headings and Figtree for body. Lucide-style line icons (`js/core/icons.js`). No gradients, glows, shadows (the only `box-shadow`s are the input focus ring and error borders), emoji or all-caps labels. Rana's five poses are flat SVGs in `assets/rana/` (no muscle lines: the user doesn't like them). Tokens live in `css/tokens.css`. Rana's wording is in `js/core/coach.js`: first person, plain words, short tips that name a weight, reps or an exercise.
+
+**Smooth transitions everywhere** (a standing requirement): cross-document view transitions (`@view-transition` in `css/base.css`, `js/core/transitions.js` in every `<head>`), `Rana.ui.transition` for in-page changes, the data cache so pages render without waiting, and everything instant under `prefers-reduced-motion`. Check every new screen for it.
+
+## Screens and flow
+Questionnaire (`onboarding`, 15 questions, one per screen) → plan reveal → sign-up → Today. Tab bar (Today / Plan / Progress / Profile) on the main screens only; focused screens (questionnaire, reveal, sign-up, workout, builder, post-workout summary) have none.
+
+| Page | Purpose |
+|---|---|
+| `index.html` | redirect only |
+| `onboarding.html` | the questionnaire; the last question is "current lifts" (skipped for never-trained) |
+| `plan-reveal.html` | split and week on top; 12-week route, calories/macros and disclaimer below the fold; "Start my plan" locks it in |
+| `sign-up.html` | **intentionally inert**: .edu email check only, saves the email, never the password |
+| `today.html` | today's suggested workout (or rest day), week strip, Rana's tip, Resume/Discard for an unfinished workout |
+| `workout.html` | logging, one exercise at a time: last time, rest timer, "How to do it" (a "Video coming soon" box), picker sheet for freestyle |
+| `workout-summary.html` | after a workout: plain XP lines counting up, level bar. Also the logbook view (`?from=history`) with Edit |
+| `progress.html` | main lifts vs targets, weekly XP chart, recent workouts; `history.html` is the full list |
+| `plan.html`, `plan-builder.html` | Rana's plan and the user's own (days only), one active; builder has no tab bar |
+| `profile.html` | name, Level, tier milestones, titles, email, every answer with Edit, starting lifts with Edit |
+
+## Architecture
+Plain `<script defer>` files hanging off a `window.Rana` namespace. Order on every page: data, storage, questions, plan, game, progress, coach, icons, ui, components, page, nav, then the page script. No inline scripts.
+
+```
+css/tokens.css, base.css, components.css   shared; css/pages/<page>.css only what one screen needs
+js/core/   data (fetch + sessionStorage cache)   storage (the ONLY localStorage code)
+           questions (the 15 questions, used by onboarding and Profile)   answer-control (one question's UI)
+           plan (split lookup, schedule, two plans, repair, main lifts)   game (XP ledger, levels, tiers, titles, targets)
+           progress (read models)   coach (progression rule + every Rana line)
+           icons, ui (el(), buttons, confirm/sheet, transition, numericField), components, page, nav, exercise-picker
+           workout, workout-view (logging logic and UI)   transitions
+js/pages/  exactly one per HTML page: a single Rana.page.start({requires, tab, render(ctx)}) call
+data/      exercises, splits, workouts, slots, exercise_limitations (generated; see scripts/)
+scripts/   build_library.py, library_rules.py, validate_library.py, test_leveling.js
+```
+
+`Rana.page.start` loads data, reads and normalizes the profile and plan, repairs the plan if its split or day was removed, redirects if something is missing (`requires`: none, profile, plan, active-plan), builds `ctx = {data, profile, plan, today, sessions, sets, ledger()}` and calls `render`. Page scripts only render; the logic lives in tested core modules.
+
+**Rules for code in this app**
+- Nothing derived is stored. XP, levels, targets and stats are replayed from saved sets every time (`Rana.game.computeXpLedger`). Deleting or fixing a set flows through everything.
+- Components return DOM elements. Stateful ones expose methods (`update`, `setValue`, `setError`).
+- **Never use `window.confirm`, `alert` or `prompt`** (the Claude app's browser blocks them). Use `Rana.ui.confirm` / `Rana.ui.sheet`.
+- Set boxes are number-only text boxes (`Rana.ui.numericField`).
+- Storage keys are `rana:v1:*` (`profile`, `plan`, `saved_plans`, `sessions`, `logged_sets`). Reads normalize old shapes, so existing data keeps working.
+
+## Product rules
+
+**Plans.** Goal first, then days, from a plain table you wrote (`SPLIT_FOR` in `plan.js`): build muscle / lose fat → 3 PPL, 4 Aesthetics, 5 Hybrid, 6 PPL + Arnold; get stronger → Upper/Lower at every count; general fitness → 3 Full Body, 4–6 Upper/Lower. Someone training N days gets a split's first N days. Fitness level only tags day counts "Recommended". Focus area and "where you train" are saved but change nothing (focus area advisory by decision; every exercise has swap options, so any gym can run any plan). Every workout has an optional abs section at the end (ab sets earn strength XP but don't count toward finishing).
+- Two plans, one active. `saved_plans` holds `rana` and optionally `own`; `plan` is the active schedule everything reads, with `active_plan_id`. `plan.split_id` always stays Rana's split. The **own plan is days only**: each weekday is Rest or a named training day, and the user adds exercises while logging (`workout_id: "OWN_WORKOUT"`). It counts as following the plan with 3 or more sets.
+- Switching never rewrites past XP: `schedule_history` keeps each week with an `effective_from`; a switch starts today, or tomorrow if a workout was already started today.
+- The schedule is a **suggestion**. A missed training day is marked "missed", never rescheduled. Training something else shows "off-plan". Any day can start a freestyle workout.
+
+**Workouts.** Every workout is a session record (suggested, own-plan or freestyle) that exists from Start until Finish; sets point to it by `session_id`. Only finished sessions count. One workout in progress at a time. Limitations (knee, shoulder, lower back, wrist) shape only the suggested workout's picks (`data/exercise_limitations.json`, a DRAFT); freestyle ignores them. Program workouts are capped at 3 sets per exercise (`scripts/library_rules.py`, applied by the build); freestyle isn't.
+
+**XP and levels** (full rules in `docs/leveling-system.md`). Only three sources: beating your all-time best estimated 1RM on an exercise (10 XP per 1%, capped 60 per exercise per session; the first 3 sessions of an exercise are calibration), finishing a session (100 XP plus a streak boost of 5% per session up to 50%, a miss halves the streak), and **hitting a lift target (+500 XP once)**. Rest-day workouts earn no session XP. Level n needs `44 × (n−1)²` XP; tiers Spark → Ignition (5) → Awakened (13) → Ascended (22) → Transcendent (36) → Mythic (50). Tier names and titles appear only on Profile. Main screens say "Level N".
+
+**Lift targets.** Progress tracks the first lift of each day of Rana's plan (from the saved Rana plan even if the own plan is active). Target = estimated max × (1 + 25% never trained / 15% returning / 8% consistent), rounded up to 5 lb (reps for bodyweight lifts: a whole rep, at least +1). The starting-lifts answers only seed a goal and **never** seed XP personal bests. A target applies only to exercises that are the first slot of some workout day, so plan changes never change earned XP.
+
+## Locked design decisions
+1. **Rest is a suggestion, not a lock.** "Start a workout anyway" is available; it earns strength XP but no session XP.
+2. **Browsing never starts a workout.** The Today card and the Plan tab are the preview of a day. (Freestyle and own-plan days go straight to logging because there's nothing to preview.)
+3. **Today's workout card is minimal**: the day name and a start button; the exercise detail lives on the Plan tab.
+4. **No equipment tiers** and no equipment-based plans. Equipment may return later as a profile setting.
+5. **No Google Calendar in v1**, but the fixed weekly schedule rule stands, and the data model must not make Calendar hard to add later.
+6. **Exercise references use `exercise_key`**, never free-text names.
+7. **Calorie/macro targets are display-only** (shown once on the plan reveal): floor 1,500 kcal men / 1,200 women, rate cap about 1% bodyweight per week.
+8. **Levels never go down from training or resting, and XP rewards getting stronger, showing up and hitting set targets, never volume.** Corrections to your own data may lower a level. No cross-user strength ratings; everyone starts at Level 1.
+9. **Rana is the coach character**, drawn from the user. Original naming throughout: no borrowed characters, rank ladders or system dialogue.
+10. **No native popups; smooth transitions; one source of truth** (see above).
+
+## Not in v1
+AI-generated plans, Google Calendar, nutrition logging, video (a placeholder box only), cardio programming, native app, social features (planned later: friends and same-school users see each other's level and tier only, never lifts, weight or streaks), equipment tiers, real authentication, cross-device sync, notifications. Don't suggest adding these.
+
+## Testing and running
+- Serve with `python3 -m http.server 8000` (the `rana` preview config in `.claude/launch.json`), because `fetch` is blocked on `file://`.
+- **Test on `http://127.0.0.1:8000`, never `localhost:8000`.** The localhost origin holds the user's own data; 127.0.0.1 has separate storage.
+- `node scripts/test_leveling.js` runs the real core modules in Node: XP rules, targets, coach, plan switching, workout steps, summaries, plan re-pick (158 checks). `python3 scripts/validate_library.py` checks the exercise library.
+- The preview browser caches static files hard: force-refresh with `fetch(url, {cache: 'reload'})` then reload.
+- The program content comes from `workout-data/workout_splits_database.xlsx`; `scripts/build_library.py` regenerates `data/*.json` from it (data now: 7 splits, 27 workout days, 144 slots, 94 exercises).
+
+## Needs the coach's review (placeholders, not confirmed)
+- The 43 exercise-library entries added in `scripts/build_library.py` and `data/exercise_limitations.json` are drafted, not reviewed. (Knee tags never swap anything; shoulder tags are broad.)
+- Projected-calorie/macro formulas in `game.js` are first-pass inventions. Leveling numbers (`XP_RULES`), title names and the 12-week level forecast are tunable placeholders. The +500 target bonus moves Level 50 to about week 150.
+- Coaching gaps in the workbook: 3-day PPL gives 3 chest sets a week; Upper/Lower A and B have no flat bench or hinge; few hinges and almost no glute work overall.
+- Deload weeks are shown on the route but not prescribed. There's no A/B week rotation.
+- Rana's lines in `coach.js` were drafted for review. The coach tips' progression rule uses starting numbers.
+- Height is centimeters only. Not tested in a browser: reduced-motion summary, the very smallest phone widths.
+
+## Open questions (PRD §13)
+1. **Under-18 users:** age is saved, nothing branches on it.
+3. **Calibration graduation:** only the per-exercise 3-session calibration exists; a per-movement-pattern gate isn't built.
+4. **Session length:** not asked as a question.
+(Focus area was resolved as advisory only.) Still open: what Progress shows when only the own plan is used (it follows Rana's saved plan), and whether Progress follows the slot's primary exercise or the swap actually logged.
+
+## Next
+0. **⏰ Reminder: per-exercise history** is the next agreed feature (tap an exercise to see every session, its sets over time, the all-time best and a trend). `Rana.progress.lastTime` and `ledger.lifts[key].history` are its foundation.
+1. Coach review pass of the placeholders above.
+2. Resolve the open questions.
+3. Deploy (free hosting), then move storage off `localStorage` to Supabase with real accounts, which also unlocks sign-out, real .edu verification and the social features.

@@ -192,6 +192,8 @@ One note for local testing: `fetch` against `file://` is blocked by browsers. On
 
 ## 7. The game system
 
+> **SUPERSEDED (2026-11-29):** stats (STR/AGI/VIT/INT), Recovery and the XP formulas below were replaced. Current rules: `docs/leveling-system.md` and `CLAUDE.md`.
+
 ### 7.1 Stats — what they mean
 
 Four stats, each derived from a distinct, real training quality. Nothing is allocated by the user.
@@ -343,6 +345,8 @@ Nutrition numbers are display-only per D4. Present them as part of the projectio
 ---
 
 ## 10. Visual design system
+
+> **SUPERSEDED (2026-11-29):** the dark HUD look was replaced by the redesign (light, marigold, Rana the coach). Current look: `CLAUDE.md` ("Look and feel") and `css/tokens.css`.
 
 The brief pins this down: deep black, neon cyan, sharp angular panels, system-alert modals, RPG stat bars. Follow it exactly.
 

@@ -16,7 +16,7 @@
 //   skipIf(a)    true if this question should not be asked, given the answers so far
 //   validate(v, a)  an error message that says how to fix it, or null
 //
-// The words are Rana's (docs/redesign/PLAN.md §11). Change them here.
+// The words are Rana's. Change them here.
 
 window.Rana = window.Rana || {};
 

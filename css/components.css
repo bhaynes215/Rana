@@ -1,7 +1,7 @@
 /*
   Components: every reusable piece of the interface, built once.
   The JS that creates them lives in js/core/ui.js and js/core/components.js;
-  the specs are in docs/redesign/handoff/components.md.
+  the look is described in CLAUDE.md ("Look and feel") and tokens.css.
 
   Rules for everything below: no gradients, glows, blur or drop shadows (the
   one box-shadow in the app is the input focus ring), no raw colors (use the
