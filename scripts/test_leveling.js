@@ -523,6 +523,14 @@ check("coach: a freestyle exercise (no slot) uses an 8-12 range", Rana.coach.sug
 const tipCtx = { data, plan: plan3, today: S2, sessions: [], sets: [], profile: { limitations: [] } };
 check("today tip: your very first workout", Rana.coach.todayTip(tipCtx).text.startsWith("Your first "), Rana.coach.todayTip(tipCtx).text);
 check("today tip: a rest day says what's next", (() => { const t = Rana.coach.todayTip({ ...tipCtx, today: addDays(S2, 1) }).text; return t.startsWith("Rest today. Next up is") && t.includes("Wednesday"); })(), Rana.coach.todayTip({ ...tipCtx, today: addDays(S2, 1) }).text);
+// "Done today" needs a plan whose training day is the real today (day status compares with the real date).
+const realToday = Rana.plan.todayStr();
+const weekdayNow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date().getDay()];
+const nextDay = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][(new Date().getDay() + 2) % 7];
+const planNow = { ...plan3, start_date: addDays(realToday, -30), weekday_map: { [weekdayNow]: plan3.weekday_map.Mon, [nextDay]: plan3.weekday_map.Wed } };
+const doneNow = plannedSession(planNow, realToday);
+const doneTip = Rana.coach.todayTip({ data, plan: planNow, today: realToday, sessions: [doneNow.session], sets: doneNow.sets, profile: { limitations: [] } }).text;
+check("today tip: after training, thanks and what's next", doneTip.startsWith("Nice work today. Next up is"), doneTip);
 check("progress tip: the fastest-rising lift", (() => { const t = Rana.coach.progressTip({ today: "2026-11-28", rows: [{ unit: "lb", state: "tracking", name: "Squat", current: 245, target: 275, history: [{ date: "2026-10-20", score: 225 }, { date: "2026-11-27", score: 245 }] }] }).text; return t === "Your Squat is up 20 lb in 6 weeks. That's your fastest lift right now."; })());
 check("progress tip: otherwise the nearest target", Rana.coach.progressTip({ today: "2026-11-28", rows: [{ unit: "lb", state: "tracking", name: "Bench", current: 190, target: 205, history: [] }] }).text === "15 lb to go on your Bench target.");
 check("progress tip: nothing logged yet", Rana.coach.progressTip({ today: "2026-11-28", rows: [] }).kind === "empty");

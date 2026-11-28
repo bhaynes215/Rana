@@ -57,6 +57,8 @@ Rana.coach = (() => {
     streakNone: "Today starts your streak.",
     restDay: "Rest today. Next up is {workout} on {weekday}.",
     restDayNoNext: "Rest today. Your next workout is coming up.",
+    doneToday: "Nice work today. Next up is {workout} on {weekday}.",
+    doneTodayNoNext: "Nice work today. Your next workout is coming up.",
     firstWorkout: "Your first {workout} is today. Go light and learn the moves.",
     freestyleEmpty: "Add your first exercise. I'll keep track of your sets.",
 
@@ -187,6 +189,7 @@ Rana.coach = (() => {
   const weekdayName = (dateStr) => new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
 
   // The tip on Today. ctx is Rana.page's context: { data, profile, plan, today, sessions, sets }.
+  //   already trained today        -> thanks, and what's next
   //   a rest day                   -> what's next
   //   your very first workout      -> go light and learn the moves
   //   an own-plan day              -> add your first exercise
@@ -197,16 +200,23 @@ Rana.coach = (() => {
     const finishedToday = sessions.filter((s) => s.date === today);
     const scheduled = Rana.plan.getSessionForDate(today, plan, data, finishedToday);
 
-    if (scheduled.isRestDay) {
+    // The next training day in the plan, within a week: { workout, weekday } or null.
+    const nextWorkout = () => {
       for (let n = 1; n <= 7; n++) {
         const date = Rana.progress.addDays(today, n);
         const next = Rana.plan.getSessionForDate(date, plan, data, []);
-        if (!next.isRestDay) {
-          const name = next.workout ? next.workout.day_name : next.ownDayName || "your workout";
-          return { kind: "rest", text: fill(LINES.restDay, { workout: shortWorkoutName(name), weekday: weekdayName(date) }) };
-        }
+        if (!next.isRestDay) return { workout: shortWorkoutName(next.workout ? next.workout.day_name : "your workout"), weekday: weekdayName(date) };
       }
-      return { kind: "rest", text: LINES.restDayNoNext };
+      return null;
+    };
+
+    if (scheduled.status === "completed" || (scheduled.isRestDay && finishedToday.length)) {
+      const next = nextWorkout();
+      return { kind: "done", text: next ? fill(LINES.doneToday, next) : LINES.doneTodayNoNext };
+    }
+    if (scheduled.isRestDay) {
+      const next = nextWorkout();
+      return { kind: "rest", text: next ? fill(LINES.restDay, next) : LINES.restDayNoNext };
     }
     if (scheduled.isOwnWorkout) return { kind: "freestyle-empty", text: LINES.freestyleEmpty };
     if (!sessions.length) {

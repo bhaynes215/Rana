@@ -480,6 +480,13 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 
 **Check:** vs `05-home-today.png`, and each state forced via the fixture. The off-plan and missed states show in the week row.
 
+**As built (Phase 5):** `today.html` + `js/pages/today.js` + `css/pages/today.css`; the old `dashboard.*`, `session-detail.*` and `rana-dashboard-mockup.html` are deleted.
+- Start buttons link to `workout.html?date=YYYY-MM-DD` (the suggested or own-plan workout; Phase 6's `workout.js` creates the session on arrival, as the old logging screen did) or `workout.html?session=ID` (freestyle, resume). The week row and "See summary" link to `workout-summary.html?session=ID` (`&from=history` for the logbook view) for Phase 7.
+- The states were each forced in the 127.0.0.1 fixture and checked: rest day, training day (with and without a shoulder limitation), in progress (Resume / Discard with its confirm), done for today, own-plan day, rest-day workout done, the freestyle name sheet. Week row shows done, missed and today.
+- Rana's tip after a finished workout now says thanks and what's next (`LINES.doneToday` in `coach.js`), not tomorrow's advice. Tested.
+- `.exercise-list` rows are now a two-column grid in `components.css`, so a long exercise name wraps without pushing its sets to a new line.
+- The avatar poses no longer have muscle or chest lines (flat shapes, as in the reference image).
+
 ### Phase 6: Workout logging (`workout.html`): the biggest phase, two commits
 **Delete:** `active-session.html/.js` (rewrite from scratch, reusing only the storage calls), the per-slot card layout, the swap buttons, the old Log button flow.
 

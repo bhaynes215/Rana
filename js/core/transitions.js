@@ -12,6 +12,7 @@ function ignoreSkippedTransition(event) {
   if (!transition) return;
   transition.ready.catch(() => {});
   transition.finished.catch(() => {});
+  transition.updateCallbackDone.catch(() => {});
 }
 
 window.addEventListener("pagereveal", ignoreSkippedTransition);

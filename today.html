@@ -3,162 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — Rana</title>
+  <title>Today — Rana</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Semi+Condensed:wght@500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400..800&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages/today.css">
+  <script src="js/core/transitions.js"></script>
 </head>
-<body>
-  <!--
-    Rebuilt against design/rana-dashboard-mockup.html (2026-09-11). The
-    mockup's day1/day40 toggle, .note labels, .phone wrapper and duplicated
-    "…2" mobile markup were scaffolding for comparing two states side by
-    side — none of that is here. This is one responsive layout: two
-    columns above 760px (the mockup's own breakpoint), one column below.
-  -->
+<body class="has-tabbar">
+  <!-- Drawn by js/pages/today.js: level, streak, the week, Rana's tip, and today's workout. -->
+  <main class="page" id="main"></main>
 
-  <!-- Persistent chrome: identity, tier, XP, recovery, level. Pinned via
-       position: sticky in styles.css — does not scroll with the content
-       below it. On phones it's two compact rows (who you are + level, then
-       the two meters side by side); on wide screens, one row. -->
-  <header class="vitals">
-    <div class="vitals-id">
-      <p id="vitals-name" class="hud-name vitals-name"></p>
-      <p id="vitals-title" class="vitals-title" hidden></p>
-      <p id="vitals-tier" class="hud-tier"></p>
-    </div>
-    <div class="vitals-level" aria-label="Level">
-      <span class="vitals-level-label">LV</span>
-      <span id="level-text" class="vitals-level-value num"></span>
-    </div>
-    <div class="vitals-meter vitals-meter--xp">
-      <div class="vitals-meter-row">
-        <span id="xp-label" class="vitals-meter-label">Next level</span>
-        <span id="xp-text" class="vitals-meter-value num"></span>
-      </div>
-      <div id="xp-bar" class="stat-bar"></div>
-    </div>
-    <div class="vitals-meter vitals-meter--recovery">
-      <div class="vitals-meter-row">
-        <span class="vitals-meter-label">Recovery</span>
-        <span id="recovery-text" class="vitals-meter-value num"></span>
-      </div>
-      <div id="recovery-bar" class="stat-bar"></div>
-    </div>
-  </header>
-
-  <main class="dashboard-main">
-    <!-- A workout already started but not finished (today's, or one left
-         over from an earlier day). Only one workout can be in progress at a
-         time, so while this shows, the start buttons below are hidden. -->
-    <section id="resume-banner" class="panel resume-banner" hidden>
-      <p id="resume-label" class="eyebrow"></p>
-      <p id="resume-title" class="resume-title"></p>
-      <div class="resume-actions">
-        <button id="resume-btn" class="btn-continue" type="button">Resume</button>
-        <button id="discard-btn" class="btn-secondary" type="button">Discard</button>
-      </div>
-    </section>
-
-    <!-- The page reads top to bottom as: today → this week → your stats.
-         On wide screens the stats move to a right-hand column. -->
-    <div class="dashboard-grid">
-
-      <!-- Today's suggested workout. The day name is the largest text on the
-           page (no "Welcome back" greeting). -->
-      <section class="panel session-card" aria-labelledby="session-day">
-        <div class="session-card-top">
-          <p id="session-label" class="eyebrow"></p>
-          <p id="today-date" class="session-date"></p>
-        </div>
-        <h1 id="session-day" class="session-day"></h1>
-        <p id="session-focus" class="session-focus"></p>
-
-        <dl id="session-meta" class="session-meta">
-          <div><dt class="eyebrow">Exercises</dt><dd id="meta-slots" class="num"></dd></div>
-          <div><dt class="eyebrow">Sets</dt><dd id="meta-sets" class="num"></dd></div>
-          <div><dt class="eyebrow">Time</dt><dd id="meta-time" class="num"></dd></div>
-        </dl>
-
-        <div id="session-yield" class="session-yield">
-          <span class="eyebrow">Builds</span>
-          <span id="yield-chips" class="chips"></span>
-        </div>
-
-        <!-- Set when limitations swapped exercises or some still load a limited joint. -->
-        <p id="limitation-note" class="session-note session-note--caution" hidden></p>
-
-        <!-- Rest-day quote. Rest is the SUGGESTION on a rest day, not a lock
-             (changed 2026-11-25; reverses locked design decision #1). -->
-        <blockquote id="rest-note" class="session-quote" hidden>
-          <p id="rest-quote-text"></p>
-          <cite id="rest-quote-cite"></cite>
-        </blockquote>
-
-        <!-- The buttons always sit together at the bottom of the card, with
-             room above them: the main action, then the quieter freestyle
-             option ("Start a workout anyway" / "Do something else"). -->
-        <div class="session-actions">
-          <button id="session-cta" class="btn-continue" type="button"></button>
-          <button id="freestyle-btn" class="btn-secondary" type="button"></button>
-        </div>
-      </section>
-
-      <section class="panel microcycle" aria-labelledby="week-heading">
-        <div class="panel-head">
-          <h2 id="week-heading" class="eyebrow">This week</h2>
-          <span id="week-number" class="panel-head-meta num"></span>
-        </div>
-        <div id="week-strip" class="microcycle-strip"></div>
-      </section>
-
-      <div class="dashboard-side">
-        <section class="panel status-matrix" aria-labelledby="matrix-heading">
-          <div class="panel-head">
-            <h2 id="matrix-heading" class="eyebrow">Status matrix</h2>
-            <span class="panel-head-meta">Now → 12-week target</span>
-          </div>
-          <div id="stat-rows"></div>
-        </section>
-
-        <div class="dash-stats">
-          <div class="dash-stat">
-            <span class="eyebrow">Streak</span>
-            <span id="footer-consistency" class="dash-stat-value num"></span>
-          </div>
-          <a class="dash-stat dash-stat--link" href="history.html">
-            <span class="eyebrow">Workouts</span>
-            <span id="footer-logged" class="dash-stat-value num"></span>
-            <span class="dash-stat-cta">History →</span>
-          </a>
-          <div class="dash-stat">
-            <span class="eyebrow">Next tier</span>
-            <span id="footer-next" class="dash-stat-value"></span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- "Name your workout" prompt shown when starting a freestyle workout. -->
-  <div id="name-backdrop" class="modal-backdrop" hidden>
-    <form id="name-form" class="panel panel--raised name-modal" aria-labelledby="name-heading">
-      <h2 id="name-heading" class="name-modal-heading">Name your workout</h2>
-      <input id="name-input" type="text" maxlength="40" autocomplete="off" aria-label="Workout name">
-      <div class="name-modal-actions">
-        <button type="submit" class="btn-continue">Start</button>
-        <button type="button" id="name-cancel" class="btn-secondary">Cancel</button>
-      </div>
-    </form>
-  </div>
-
-  <script src="data.js" defer></script>
-  <script src="storage.js" defer></script>
-  <script src="plan.js" defer></script>
-  <script src="game.js" defer></script>
-  <script src="ui.js" defer></script>
-  <script src="js/dashboard-state.js" defer></script>
-  <script src="dashboard.js" defer></script>
-  <script src="nav.js" defer></script>
+  <script src="js/core/data.js" defer></script>
+  <script src="js/core/storage.js" defer></script>
+  <script src="js/core/plan.js" defer></script>
+  <script src="js/core/game.js" defer></script>
+  <script src="js/core/progress.js" defer></script>
+  <script src="js/core/coach.js" defer></script>
+  <script src="js/core/icons.js" defer></script>
+  <script src="js/core/ui.js" defer></script>
+  <script src="js/core/components.js" defer></script>
+  <script src="js/core/page.js" defer></script>
+  <script src="js/core/nav.js" defer></script>
+  <script src="js/pages/today.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,20 @@
+/* Today: the layout around the shared components. */
+
+.today { display: flex; flex-direction: column; gap: var(--space-5); }
+
+/* The one bold element: "Level 7", with its bar and the streak under it. */
+.today-head { display: flex; flex-direction: column; gap: var(--space-4); }
+.today-head__top { display: flex; flex-direction: column; gap: var(--space-1); }
+.today-streak { display: flex; align-items: center; gap: var(--space-3); }
+.today-streak svg { flex: none; color: var(--color-accent-strong); }
+
+/* Today's workout card. */
+.today-actions { margin-top: var(--space-4); align-items: stretch; }
+.today-actions .btn--text { align-self: center; }
+
+/* An exercise row can carry a one-line caution under it; the abs row is quieter. */
+.exercise-list__caution { grid-column: 1 / -1; margin: -4px 0 6px; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.exercise-list__abs { margin-top: var(--space-1); padding-top: var(--space-2); border-top: 1px solid var(--color-divider); color: var(--color-ink-muted); }
+.exercise-list__abs .exercise-list__value { font-size: var(--text-sm); }
+
+.today-note { margin-top: var(--space-2); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink-muted); }

@@ -191,7 +191,7 @@ body.has-tabbar .footer-bar__inner { padding-bottom: var(--space-4); }
 
 /* A plain list inside a hero card: name on the left, "3 × 6-8" on the right. */
 .exercise-list { display: flex; flex-direction: column; gap: 2px; margin-top: 14px; font-size: var(--text-md); line-height: 28px; }
-.exercise-list li { display: flex; justify-content: space-between; gap: var(--space-3); }
+.exercise-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-3); } /* a long name wraps; the sets stay on its line */
 .exercise-list__value { flex: none; color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
 
 /* List card rows: title and subtitle on the left, a quiet value on the right. */
