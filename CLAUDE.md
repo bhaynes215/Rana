@@ -116,6 +116,7 @@ AI-generated plans, Google Calendar, nutrition logging, video (a placeholder box
 
 ## Notes to come back to (brainstorm with Opus)
 - **Leveling up doesn't feel highlighted enough.** The user says that as a new user it would look empty: Level N on Today and a small bar on the summary. Ideas to explore later: a bigger level-up moment, visible next-level goals, milestone previews on Today and Progress. Game words are kept on Profile by decision (see locked decision 8 and `docs/leveling-system.md`).
+- **Cache-busting before deploy.** A browser can keep an old copy of one script while loading the new copy of another, which breaks a page (seen 2026-11-29: a stale `plan.js` made Continue on question 14 do nothing). Before we deploy, add a version to every script and stylesheet link (or a build step that fingerprints file names) so an update always loads together. Same for `data/*.json` (the `sessionStorage` data cache already has a version key).
 - **Warm-up and feeder sets.** Wanted in the workouts, but only working sets are logged. Open design: see the memory note "warmup-feeder-sets".
 
 ## Next
