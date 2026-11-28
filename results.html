@@ -21,13 +21,37 @@
     <!-- The split is the headline of this screen: its name, the shape of
          the week, and each training day laid out on its real weekday.
          Filled in by results.js. -->
-    <section class="panel plan-hero reveal-step" data-step="1" aria-labelledby="plan-hero-name">
-      <p class="today-eyebrow">Your split</p>
+    <section id="rana-card" class="panel plan-hero reveal-step" data-step="1" aria-labelledby="plan-hero-name">
+      <div class="plan-card-head">
+        <p class="today-eyebrow">Your split</p>
+        <span class="plan-card-active" hidden>Active</span>
+      </div>
       <h2 id="plan-hero-name" class="plan-hero-name"></h2>
       <p id="plan-hero-meta" class="plan-hero-meta"></p>
       <ol id="plan-hero-week" class="plan-hero-week"></ol>
       <p id="plan-hero-why" class="plan-hero-why"></p>
+      <button type="button" class="btn-secondary plan-card-activate" data-plan="rana" hidden>Start with Rana's plan</button>
     </section>
+
+    <!-- The user's own plan, once they've built one: just their training
+         days and what each is called. Whichever plan is active is the one
+         lock-in starts. -->
+    <div class="results-own reveal-step" data-step="1">
+      <section id="own-card" class="panel plan-card" aria-labelledby="own-name" hidden>
+        <div class="plan-card-head">
+          <p class="today-eyebrow">Your plan</p>
+          <span class="plan-card-active" hidden>Active</span>
+        </div>
+        <h2 id="own-name" class="plan-card-name"></h2>
+        <p id="own-meta" class="plan-hero-meta"></p>
+        <ol id="own-week" class="plan-hero-week"></ol>
+        <button type="button" class="btn-secondary plan-card-activate" data-plan="own" hidden>Start with your plan</button>
+        <div class="plan-card-actions">
+          <a href="plan-builder.html?from=results" class="btn-quiet btn-quiet--accent">Edit</a>
+        </div>
+      </section>
+      <a id="build-own-btn" href="plan-builder.html?from=results" class="btn-secondary btn-link">Build your own plan</a>
+    </div>
 
     <!-- Your 12-week route: tier milestones on top, training phases
          underneath, both on the same 12-week grid so they line up.
@@ -73,6 +97,8 @@
   <script src="storage.js" defer></script>
   <script src="plan.js" defer></script>
   <script src="game.js" defer></script>
+  <script src="ui.js" defer></script>
+  <script src="plan-view.js" defer></script>
   <script src="results.js" defer></script>
 </body>
 </html>

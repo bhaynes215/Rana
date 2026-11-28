@@ -10,24 +10,16 @@
 </head>
 <body>
   <!--
-    Every finished workout — suggested and freestyle — newest first, grouped
-    by month. Tapping one opens its summary (session-complete.html in
+    Every finished workout — suggested, your own plan and freestyle — newest
+    first, grouped by month. Tapping one opens its summary (session-complete.html in
     history mode: no replayed animation), where sets can be fixed or the
     workout deleted. Built by history.js from the session records.
   -->
   <main class="screen history">
-    <a href="dashboard.html" class="back-link">← Dashboard</a>
-
     <header class="history-head">
       <h1 class="history-title">Workout history</h1>
       <p id="history-summary" class="history-summary"></p>
     </header>
-
-    <div class="segmented" role="group" aria-label="Show">
-      <button type="button" class="segmented-btn" data-filter="all" aria-pressed="true">All</button>
-      <button type="button" class="segmented-btn" data-filter="planned" aria-pressed="false">Suggested</button>
-      <button type="button" class="segmented-btn" data-filter="freestyle" aria-pressed="false">Freestyle</button>
-    </div>
 
     <div id="history-list" class="history-list"></div>
   </main>
@@ -37,5 +29,6 @@
   <script src="plan.js" defer></script>
   <script src="game.js" defer></script>
   <script src="history.js" defer></script>
+  <script src="nav.js" defer></script>
 </body>
 </html>

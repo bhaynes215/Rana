@@ -43,6 +43,100 @@ Rana.plan = (() => {
 
   const WEEKDAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+  // A training day in the user's OWN plan is stored as this id instead of a
+  // library workout id. The plan only says "Tuesday is Push"; there is no
+  // exercise list behind it, so on that day the user builds the whole workout
+  // from the exercise library while logging (the way a freestyle workout works).
+  const OWN_WORKOUT = "OWN_WORKOUT";
+
+  // --- Which schedule applied on a given date? ---
+  // The plan is "the active schedule": weekday_map (and, for an own plan,
+  // own_day_names). When the user switches plans, the old schedule is kept in
+  // plan.schedule_history so past days are still judged against the plan that
+  // was active THEN. Without this, switching plans would re-judge every past
+  // day against the new week and change old XP and streaks after the fact.
+  // A plan with no history (everyone before 2026-11-27) just uses weekday_map.
+  function scheduleFor(plan, dateStr) {
+    const history = plan.schedule_history;
+    if (history && history.length) {
+      let found = history[0]; // dates before the first entry use the first schedule
+      for (const entry of history) {
+        if (entry.effective_from <= dateStr) found = entry;
+      }
+      return { weekday_map: found.weekday_map, own_day_names: found.own_day_names || {} };
+    }
+    return { weekday_map: plan.weekday_map, own_day_names: plan.own_day_names || {} };
+  }
+
+  // When does a plan switch start? Today, unless a workout was already started
+  // or finished today: then it starts tomorrow, so a workout already done
+  // today is not re-judged against a different week.
+  function switchEffectiveDate() {
+    const today = todayStr();
+    const trainedToday = Rana.storage.getSessions().some((s) => s.date === today);
+    if (!trainedToday) return today;
+    const d = new Date(today + "T00:00:00");
+    d.setDate(d.getDate() + 1);
+    return toDateStr(d);
+  }
+
+  // Writes a new schedule into the plan. A plan that is already active keeps
+  // its old schedule in schedule_history (see scheduleFor); a draft (the
+  // results screen, before lock-in) just changes, since nothing has happened yet.
+  // Returns { plan, effectiveFrom }.
+  function commitSchedule(oldPlan, nextPlan) {
+    let effectiveFrom = null;
+    if (oldPlan.status === "active") {
+      const history =
+        oldPlan.schedule_history && oldPlan.schedule_history.length
+          ? [...oldPlan.schedule_history]
+          : [{ effective_from: "0000-01-01", weekday_map: oldPlan.weekday_map, own_day_names: oldPlan.own_day_names || {} }];
+      effectiveFrom = switchEffectiveDate();
+      const entry = { effective_from: effectiveFrom, weekday_map: nextPlan.weekday_map, own_day_names: nextPlan.own_day_names || {} };
+      const i = history.findIndex((h) => h.effective_from === effectiveFrom);
+      if (i >= 0) history[i] = entry;
+      else history.push(entry);
+      history.sort((a, b) => a.effective_from.localeCompare(b.effective_from));
+      nextPlan.schedule_history = history;
+    }
+    Rana.storage.savePlan(nextPlan);
+    return { plan: nextPlan, effectiveFrom };
+  }
+
+  // Makes one of the two saved plans ("rana" or "own") the active one.
+  // plan.split_id always stays Rana's suggested split (even while the own plan
+  // is active), so the screens that show Rana's plan keep working.
+  function activatePlan(planId) {
+    const plan = Rana.storage.getPlan();
+    const def = Rana.storage.getSavedPlans()[planId];
+    if (!plan || !def) return null;
+    const next = {
+      ...plan,
+      active_plan_id: planId,
+      weekday_map: { ...def.weekday_map },
+      own_day_names: def.kind === "own" ? { ...def.own_day_names } : {},
+    };
+    if (planId === "rana") {
+      next.split_id = def.split_id;
+      next.training_weekdays = def.training_weekdays || plan.training_weekdays;
+    }
+    return commitSchedule(plan, next);
+  }
+
+  // Saves a new version of a saved plan. If it is the active one, the schedule
+  // changes too (from today, through the history).
+  function updateSavedPlan(def) {
+    Rana.storage.saveSavedPlan(def);
+    const plan = Rana.storage.getPlan();
+    if (plan && (plan.active_plan_id || "rana") === def.plan_id) return activatePlan(def.plan_id);
+    return { plan, effectiveFrom: null };
+  }
+
+  // A one-line summary for any weekday map: "4 days / week".
+  function trainingDayCount(weekdayMap) {
+    return Object.values(weekdayMap || {}).filter(Boolean).length;
+  }
+
   // The split for this profile, from the table above. Returns the split_id
   // (not the full split object) — callers fetch details from Rana.data when
   // they need them. Returns null if the table names a split that isn't in
@@ -63,22 +157,47 @@ Rana.plan = (() => {
     const plan = Rana.storage.getPlan();
     const profile = Rana.storage.getProfile();
     if (!plan || !profile) return false;
-    const mappedIds = Object.values(plan.weekday_map || {}).filter(Boolean);
-    const intact = data.splitById.has(plan.split_id) && mappedIds.every((id) => data.workoutById.has(id));
-    if (intact) return false;
+    const isRealId = (id) => id && id !== OWN_WORKOUT;
+
+    // Every library workout id the plan has ever used: today's schedule plus
+    // the history (own-plan days are not library ids, so they are skipped).
+    const allMaps = [plan.weekday_map, ...(plan.schedule_history || []).map((h) => h.weekday_map)];
+    const brokenIds = (map) => Object.values(map || {}).filter(isRealId).filter((id) => !data.workoutById.has(id));
+    const ranaSplitMissing = !data.splitById.has(plan.split_id);
+    if (!ranaSplitMissing && allMaps.every((m) => brokenIds(m).length === 0)) return false;
 
     const splitId = matchSplit(profile, data.splits);
     if (!splitId) return false;
     const weekdays = plan.training_weekdays || profile.training_weekdays || [];
-    Rana.storage.savePlan({
+    const newMap = buildWeekdayMap(data.workoutsBySplit.get(splitId) || [], weekdays);
+
+    // Any day (today's or in the history) that points at a removed workout
+    // gets the new split's workout for the same weekday. Own-plan days stay.
+    const fixMap = (map) => {
+      const out = { ...map };
+      Object.keys(out).forEach((day) => {
+        if (isRealId(out[day]) && !data.workoutById.has(out[day])) out[day] = newMap[day] || null;
+      });
+      return out;
+    };
+    const repaired = {
       ...plan,
       split_id: splitId,
       training_weekdays: weekdays,
-      weekday_map: buildWeekdayMap(data.workoutsBySplit.get(splitId) || [], weekdays),
+      weekday_map: (plan.active_plan_id || "rana") === "rana" ? newMap : fixMap(plan.weekday_map),
       reassigned_at: new Date().toISOString(),
       reassigned_from: plan.split_id,
-    });
-    console.warn(`Plan reassigned: ${plan.split_id} no longer exists, now ${splitId}.`);
+    };
+    if (plan.schedule_history) {
+      repaired.schedule_history = plan.schedule_history.map((h) => ({ ...h, weekday_map: fixMap(h.weekday_map) }));
+    }
+    Rana.storage.savePlan(repaired);
+
+    // Keep the saved copy of Rana's plan in step.
+    const saved = Rana.storage.getSavedPlans().rana;
+    if (saved) Rana.storage.saveSavedPlan({ ...saved, split_id: splitId, training_weekdays: weekdays, weekday_map: newMap });
+
+    console.warn(`Plan repaired: it pointed at a split or workout that no longer exists (Rana's split is now ${splitId}).`);
     return true;
   }
 
@@ -129,14 +248,26 @@ Rana.plan = (() => {
     const finished = finishedSessionsForDate || [];
     const date = new Date(dateStr + "T00:00:00");
     const weekday = weekdayAbbrev(date);
-    const workoutId = plan.weekday_map[weekday];
+    const schedule = scheduleFor(plan, dateStr);
+    const workoutId = schedule.weekday_map[weekday];
 
     if (!workoutId) {
       return { date: dateStr, weekday, isRestDay: true, status: "rest", finishedSessions: finished };
     }
 
-    const workout = data.workoutById.get(workoutId);
-    const slots = data.slotsByWorkout.get(workoutId) || [];
+    // A training day in the user's own plan: no library workout, no slots.
+    // The stand-in "workout" only carries the name and a one-line description.
+    const isOwnWorkout = workoutId === OWN_WORKOUT;
+    const workout = isOwnWorkout
+      ? {
+          workout_id: OWN_WORKOUT,
+          day_name: schedule.own_day_names[weekday] || "Your workout",
+          session_focus: "You build this workout",
+          est_session_minutes: null,
+          is_own: true,
+        }
+      : data.workoutById.get(workoutId);
+    const slots = isOwnWorkout ? [] : data.slotsByWorkout.get(workoutId) || [];
     const plannedDone = finished.some((s) => s.type === "planned");
     const trainedOffPlan = !plannedDone && finished.length > 0;
 
@@ -160,6 +291,7 @@ Rana.plan = (() => {
       date: dateStr,
       weekday,
       isRestDay: false,
+      isOwnWorkout,
       status,
       workoutId,
       workout,
@@ -278,6 +410,12 @@ Rana.plan = (() => {
     SPLIT_FOR,
     RECOMMENDED_DAYS,
     WEEKDAY_ORDER,
+    OWN_WORKOUT,
+    scheduleFor,
+    switchEffectiveDate,
+    activatePlan,
+    updateSavedPlan,
+    trainingDayCount,
     matchSplit,
     repairPlan,
     ABS_HINT,

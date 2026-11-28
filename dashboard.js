@@ -154,6 +154,9 @@ async function main() {
     unit.textContent = "min";
     timeEl.appendChild(unit);
     restNote.hidden = true;
+    // Own-plan day: no counts or minutes to show.
+    sessionMeta.hidden = !!today.isOwnWorkout;
+    sessionYield.hidden = !!today.isOwnWorkout;
 
     limitationNote.hidden = !today.limitationNote;
     limitationNote.textContent = today.limitationNote || "";
@@ -175,9 +178,13 @@ async function main() {
       });
       freestyleBtn.textContent = "Start another workout";
     } else {
-      cta.textContent = "Start session";
+      cta.textContent = today.isOwnWorkout ? "Start workout" : "Start session";
       cta.addEventListener("click", () => {
-        window.location.href = `session-detail.html?date=${Rana.plan.todayStr()}`;
+        // Own-plan days have nothing to preview, so they go straight to
+        // logging (the same exception freestyle has, locked decision #3).
+        window.location.href = today.isOwnWorkout
+          ? `active-session.html?date=${Rana.plan.todayStr()}`
+          : `session-detail.html?date=${Rana.plan.todayStr()}`;
       });
       freestyleBtn.textContent = "Do something else";
     }

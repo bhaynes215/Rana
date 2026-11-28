@@ -1,5 +1,5 @@
-// Workout history: every finished workout, suggested and freestyle, newest
-// first, grouped by month, with a filter for each kind.
+// Workout history: every finished workout (suggested, your own plan and
+// freestyle), newest first, grouped by month.
 //
 // Nothing new is stored for this screen: it's just a different view of the
 // session records (storage.js). The XP shown per workout comes from the
@@ -37,7 +37,7 @@ function buildRow(session, sets, xp, data) {
   const exercises = new Set(sets.map((s) => s.exercise_key)).size;
   const minutes = durationMinutes(session);
   const details = el("span", "history-details");
-  details.appendChild(el("span", `history-tag history-tag--${session.type}`, session.type === "planned" ? "Suggested" : "Freestyle"));
+  details.appendChild(el("span", `history-tag history-tag--${session.type}`, session.workout_id === Rana.plan.OWN_WORKOUT ? "Your plan" : session.type === "planned" ? "Suggested" : "Freestyle"));
   details.appendChild(
     el("span", "history-meta", [
       minutes > 0 ? `${minutes} min` : null,
@@ -88,18 +88,17 @@ async function main() {
 
   const list = document.getElementById("history-list");
 
-  function render(filter) {
+  // Every finished workout, newest first. (There used to be All / Suggested /
+  // Freestyle filters; they were removed 2026-11-28 as pointless, since each
+  // row already says what kind of workout it was.)
+  function render() {
     list.innerHTML = "";
-    const shown = ordered.filter((s) => filter === "all" || s.type === filter);
+    const shown = ordered;
 
     if (shown.length === 0) {
       const empty = el("div", "panel history-empty");
-      empty.appendChild(el("p", "history-empty-title", ordered.length ? "Nothing here yet" : "No workouts yet"));
-      empty.appendChild(
-        el("p", "history-empty-text", ordered.length
-          ? `You haven't finished any ${filter === "planned" ? "suggested" : "freestyle"} workouts yet.`
-          : "Finish a workout and it shows up here, with every set and the XP it earned.")
-      );
+      empty.appendChild(el("p", "history-empty-title", "No workouts yet"));
+      empty.appendChild(el("p", "history-empty-text", "Finish a workout and it shows up here, with every set and the XP it earned."));
       list.appendChild(empty);
       return;
     }
@@ -128,15 +127,7 @@ async function main() {
     });
   }
 
-  // --- Filter buttons ---
-  document.querySelectorAll(".segmented-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".segmented-btn").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-      render(btn.dataset.filter);
-    });
-  });
-
-  render("all");
+  render();
 }
 
 main();

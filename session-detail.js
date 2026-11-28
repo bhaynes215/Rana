@@ -41,6 +41,14 @@ async function main() {
   const list = document.getElementById("slot-list");
   list.innerHTML = "";
 
+  // A day in the user's own plan has no exercises to preview.
+  if (session.isOwnWorkout) {
+    const card = document.createElement("div");
+    card.className = "panel slot-card";
+    card.textContent = "This day is from your own plan. You build the workout while logging: add any exercise from the library.";
+    list.appendChild(card);
+  }
+
   const picks = Rana.plan.suggestWorkout(session.slots, data, limitations);
   session.slots.forEach((slot, slotIndex) => {
     const options = data.optionsBySlot.get(slot.slot_id) || [];
@@ -85,7 +93,7 @@ async function main() {
 
   // Optional abs, listed after the workout. Browse-only here: they're added
   // while logging (active-session.js).
-  const abs = Rana.plan.absOptions(data, session.slots);
+  const abs = session.isOwnWorkout ? [] : Rana.plan.absOptions(data, session.slots);
   if (abs.length) {
     const card = document.createElement("div");
     card.className = "panel slot-card abs-panel";

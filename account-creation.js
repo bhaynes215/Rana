@@ -58,8 +58,10 @@ form.addEventListener("submit", (event) => {
   }
 
   // No account is actually created here — there's no backend to send this
-  // to yet. We just move on to the dashboard. The email/password are never
-  // stored or logged.
+  // to yet. The email is saved to the profile so the Account page can show
+  // it; the password is never stored or logged.
+  const profile = Rana.storage.getProfile();
+  if (profile) Rana.storage.saveProfile({ ...profile, email });
   window.location.href = "dashboard.html";
 });
 

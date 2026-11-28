@@ -2480,3 +2480,438 @@ body.picker-open {
   letter-spacing: 0.12em;
   color: var(--text-dim);
 }
+
+/* =====================================================================
+   BOTTOM TAB BAR (2026-11-27) — drawn by nav.js on the main screens.
+   Fixed to the bottom; body.has-tabbar gets matching bottom padding so the
+   last thing on a page never hides under it. env(safe-area-inset-bottom)
+   keeps it clear of the home bar on newer phones.
+   ===================================================================== */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom);
+  background-color: rgba(4, 7, 11, 0.96);
+  border-top: 1px solid rgba(63, 233, 255, 0.22);
+}
+.tabbar-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 4px 10px;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text-dim);
+  border-top: 2px solid transparent;
+  margin-top: -1px;
+}
+.tabbar-tab svg {
+  width: 22px;
+  height: 22px;
+}
+.tabbar-tab:hover {
+  color: var(--text);
+}
+.tabbar-tab[aria-current="page"] {
+  color: var(--system-cyan);
+  border-top-color: var(--system-cyan);
+  text-shadow: 0 0 10px rgba(63, 233, 255, 0.4);
+}
+body.has-tabbar {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+@media (min-width: 760px) {
+  .tabbar {
+    left: 50%;
+    right: auto;
+    width: 480px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(63, 233, 255, 0.22);
+    border-bottom: 0;
+  }
+}
+
+/* =====================================================================
+   PLAN CARDS (Plan tab + results screen) and the plan builder
+   ===================================================================== */
+.plan-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+.plan-card-active {
+  padding: 2px 8px;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--void);
+  background-color: var(--system-cyan);
+}
+.plan-card-name {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.plan-card .plan-hero-week {
+  margin-bottom: var(--space-2);
+}
+.plan-card--active {
+  border-color: var(--system-cyan);
+  box-shadow: 0 0 24px rgba(63, 233, 255, 0.16);
+}
+.plan-card--active .plan-card-name {
+  color: var(--system-cyan);
+}
+.plan-card--empty {
+  border-style: dashed;
+}
+.plan-card-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.plan-card-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+.plan-card-actions .btn-quiet {
+  font-family: var(--font-label);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.plan-hero .plan-card-activate {
+  margin-top: var(--space-4);
+}
+.results-own {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Rana's days on the Plan tab open to show their exercises. */
+.plan-day-toggle {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.plan-day-toggle .plan-hero-focus {
+  grid-column: 1;
+}
+.plan-day-chevron {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  margin: 0 6px 0 var(--space-3);
+  border-right: 2px solid var(--system-cyan);
+  border-bottom: 2px solid var(--system-cyan);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.plan-day-toggle[aria-expanded="true"] .plan-day-chevron {
+  transform: rotate(45deg);
+}
+.plan-day-detail {
+  margin-top: var(--space-2);
+}
+.plan-day-exercises {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.plan-day-exercise-name {
+  font-weight: 600;
+}
+.plan-day-exercises .slot-prescription {
+  margin: 0;
+}
+.plan-day-abs {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* Plan builder */
+.builder-back {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.builder-count {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--system-cyan);
+  letter-spacing: 0.04em;
+}
+.builder-days {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.builder-day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.builder-day--rest {
+  background-color: transparent;
+  border-color: rgba(63, 233, 255, 0.12);
+}
+.builder-day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+.builder-toggle {
+  grid-template-columns: repeat(2, 1fr);
+  min-width: 11rem;
+}
+.builder-day-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.builder-day-name input {
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  border: 1px solid rgba(63, 233, 255, 0.25);
+  background-color: var(--panel-raised);
+  color: var(--text);
+}
+.builder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.builder-chip {
+  padding: 4px 9px;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid rgba(63, 233, 255, 0.22);
+  cursor: pointer;
+}
+.builder-chip[aria-pressed="true"] {
+  color: var(--void);
+  background-color: var(--system-cyan);
+  border-color: var(--system-cyan);
+}
+
+/* =====================================================================
+   ACCOUNT PAGE
+   ===================================================================== */
+.account-sheet {
+  border-color: var(--tier-color, var(--system-cyan));
+  box-shadow: 0 0 24px var(--tier-glow, rgba(63, 233, 255, 0.2));
+}
+.account-name {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+.account-level {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: var(--space-2) 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+.account-tier {
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  color: var(--tier-color, var(--system-cyan));
+  text-shadow: 0 0 12px var(--tier-glow, transparent);
+}
+.account-titles {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.account-title {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  border-left: 2px solid var(--tier-violet);
+}
+.account-title-name {
+  font-family: var(--font-display);
+  color: var(--tier-violet);
+}
+.account-title-desc,
+.account-title--none {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.account-title--none {
+  border-left-color: rgba(111, 133, 152, 0.4);
+}
+.account-rows {
+  margin: 0 0 var(--space-4);
+}
+.account-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid rgba(63, 233, 255, 0.1);
+}
+.account-row:last-child {
+  border-bottom: 0;
+}
+.account-row dt {
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding-top: 2px;
+}
+.account-row dd {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.account-value {
+  overflow-wrap: anywhere;
+}
+.account-edit-btn {
+  text-decoration: none;
+  padding-top: 0;
+}
+.account-edit {
+  width: 100%;
+}
+.account-edit input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  border: 1px solid rgba(63, 233, 255, 0.25);
+  background-color: var(--panel-raised);
+  color: var(--text);
+}
+.account-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.account-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.account-edit-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.account-edit-actions button {
+  padding: 10px;
+}
+.account-row dd .status-message:empty {
+  display: none;
+}
+.account-note {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.account-note--top {
+  margin: 0 0 var(--space-2);
+}
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Account: "Your answers" collapses behind its header. */
+.account-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.account-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.account-toggle-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.account-toggle-sub {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.account-toggle .plan-day-chevron {
+  transform: rotate(45deg);
+}
+.account-toggle[aria-expanded="true"] .plan-day-chevron {
+  transform: rotate(-135deg);
+}
+#answers-body {
+  margin-top: var(--space-4);
+}

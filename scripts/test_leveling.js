@@ -50,6 +50,9 @@ const data = {
   limitationsByExercise: new Map(Object.entries(limitationsDoc.tags)),
 };
 data.slotsByWorkout.forEach((l) => l.sort((a, b) => a.slot_order - b.slot_order));
+data.splits = splits;
+data.splitById = new Map(splits.map((s) => [s.split_id, s]));
+data.workoutsBySplit = new Map(splits.map((s) => [s.split_id, (s.workout_ids || []).map((id) => data.workoutById.get(id)).filter(Boolean)]));
 data.optionsBySlot.forEach((l) => l.sort((a, b) => a.option_rank - b.option_rank));
 
 function makePlan(splitId, weekdays, startDate) {
@@ -340,6 +343,83 @@ check("level curve: L5 = 704, L50 = 105,644", Rana.game.xpForLevel(5) === 704 &&
 check("levelForXp boundaries", Rana.game.levelForXp(0) === 1 && Rana.game.levelForXp(43) === 1 && Rana.game.levelForXp(44) === 2 && Rana.game.levelForXp(105644) === 50 && Rana.game.levelForXp(105643) === 49);
 check("tiers", ["SPARK", "IGNITION", "AWAKENED", "ASCENDED", "TRANSCENDENT", "MYTHIC"].join() === [1, 5, 13, 22, 36, 50].map(Rana.game.tierForLevel).join());
 check("stats start at 0", Rana.game.statValue(0) === 0);
+
+
+// ---------- 7. Two plans: switching, own-plan days, saved plans (2026-11-27) ----------
+console.log("");
+const OWN = Rana.plan.OWN_WORKOUT;
+const ownMap = { Mon: null, Tue: OWN, Wed: null, Thu: OWN, Fri: null, Sat: null, Sun: null };
+const ownNames = { Tue: "Push", Thu: "Pull" };
+const switchDate = mondays[2]; // the start of week 3
+const switched = {
+  ...plan3,
+  weekday_map: ownMap,
+  own_day_names: ownNames,
+  schedule_history: [
+    { effective_from: "0000-01-01", weekday_map: plan3.weekday_map, own_day_names: {} },
+    { effective_from: switchDate, weekday_map: ownMap, own_day_names: ownNames },
+  ],
+};
+const before = ledgerOf(h, plan3, addDays(S2, 20));
+const after = ledgerOf(h, switched, addDays(S2, 20));
+const sameDay = (a, b) => a.totalXp === b.totalXp && a.streak === b.streak && a.restDay === b.restDay && a.missed === b.missed && a.completed === b.completed;
+const pastDates = [...before.entries.keys()].filter((d) => d < switchDate);
+check("switching plans leaves every earlier day's XP, streak and rest/missed status identical",
+  pastDates.length > 0 && pastDates.every((d) => sameDay(before.entries.get(d), after.entries.get(d))), `${pastDates.length} days compared`);
+check("after the switch, the new plan's days apply (Mon is now rest, Tue is Push)",
+  Rana.plan.getSessionForDate(switchDate, switched, data, []).isRestDay &&
+  Rana.plan.getSessionForDate(addDays(switchDate, 1), switched, data, []).workout.day_name === "Push");
+const oneEntry = { ...plan3, schedule_history: [{ effective_from: "0000-01-01", weekday_map: plan3.weekday_map }] };
+check("a plan with no history behaves exactly as one with a single matching entry",
+  ledgerOf(h, oneEntry, addDays(S2, 20)).totalXp === before.totalXp && before.totalXp > 0);
+
+// Own-plan days: the user builds the workout while logging.
+const ownPlan = { split_id: three.split_id, start_date: S2, status: "active", active_plan_id: "own", weekday_map: ownMap, own_day_names: ownNames };
+function ownSession(date, nSets) {
+  const session = makeSession(date, "planned", OWN, "Push");
+  session.exercises = ["own_test_lift"];
+  const sets = [];
+  for (let k = 0; k < nSets; k++) sets.push({ session_id: session.session_id, date, slot_id: null, exercise_key: "own_test_lift", set_index: k + 1, weight: 80, reps: 8 });
+  return { session, sets };
+}
+const tue = addDays(S2, 1), thu = addDays(S2, 3);
+const ownL = ledgerOf([ownSession(tue, 3), ownSession(thu, 3)], ownPlan, thu);
+check("an own-plan day with 3 sets counts as following the plan (session XP, streak grows)",
+  ownL.entries.get(tue).completed && ownL.entries.get(tue).sessionXp === 100 && ownL.entries.get(thu).streak === 2);
+const ownShort = ledgerOf([ownSession(tue, 2)], ownPlan, addDays(S2, 2)).entries.get(tue);
+check("an own-plan day with under 3 sets earns no session XP", !ownShort.completed && ownShort.sessionXp === 0);
+const ownRest = ledgerOf([ownSession(S2, 4)], ownPlan, S2).entries.get(S2);
+check("an own-plan rest day earns no session XP", ownRest.restDay && ownRest.sessionXp === 0);
+
+// Saved plans and switching through storage.
+store.clear();
+Rana.storage.savePlan({ ...plan3, start_date: "2026-01-05" });
+const migratedSaved = Rana.storage.getSavedPlans();
+check("an existing plan becomes the saved 'rana' plan", migratedSaved.rana && migratedSaved.rana.split_id === plan3.split_id && migratedSaved.own === null);
+Rana.storage.saveSavedPlan({ plan_id: "own", kind: "own", name: "My plan", weekday_map: ownMap, own_day_names: ownNames });
+const act = Rana.plan.activatePlan("own");
+const today = Rana.plan.todayStr();
+check("activating the own plan switches the schedule from today and keeps the old one in the history",
+  act.effectiveFrom === today && act.plan.active_plan_id === "own" && act.plan.weekday_map.Tue === OWN &&
+  act.plan.schedule_history.length === 2 && act.plan.schedule_history[0].weekday_map.Mon === plan3.weekday_map.Mon);
+check("plan.split_id stays Rana's split while the own plan is active", act.plan.split_id === plan3.split_id);
+const back = Rana.plan.activatePlan("rana");
+check("switching back the same day replaces today's entry instead of stacking", back.plan.schedule_history.length === 2 && back.plan.weekday_map.Mon === plan3.weekday_map.Mon);
+Rana.storage.saveProfile({ goal: "build-muscle", training_days_per_week: 3, training_weekdays: ["Mon", "Wed", "Fri"] });
+Rana.plan.activatePlan("own");
+const ownBefore = JSON.stringify(Rana.storage.getPlan().weekday_map);
+check("repairPlan leaves an intact own plan alone", Rana.plan.repairPlan(data) === false && JSON.stringify(Rana.storage.getPlan().weekday_map) === ownBefore);
+const broken = Rana.storage.getPlan();
+broken.schedule_history[0].weekday_map = { ...broken.schedule_history[0].weekday_map, Mon: "GONE_WORKOUT" };
+Rana.storage.savePlan(broken);
+Rana.plan.repairPlan(data);
+const fixed = Rana.storage.getPlan();
+check("repairPlan fixes a removed workout in the history but keeps the own-plan days",
+  data.workoutById.has(fixed.schedule_history[0].weekday_map.Mon) && JSON.stringify(fixed.weekday_map) === ownBefore);
+// A switch after training today waits until tomorrow.
+Rana.storage.startSession({ type: "freestyle", title: "x", date: today });
+check("a switch after a workout today starts tomorrow", Rana.plan.switchEffectiveDate() > today);
+store.clear();
 
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

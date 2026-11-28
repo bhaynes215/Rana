@@ -134,58 +134,49 @@ function buildRoute(route) {
 }
 
 // --- The split (the headline of this screen) ---
-// Shows the split's name, a one-line summary, and the user's actual week:
-// all seven days, Monday first, each training day with its workout and
-// focus on the weekday it will always fall on (fixed weekly schedule), and
-// rest days marked as rest rather than left blank.
-// The user's own fitness level, shown on the summary line. (The split's
-// "experience_level" from the workbook no longer decides who gets it.)
-const FITNESS_LEVEL_LABEL = {
-  "never-trained": "New to training",
-  "returning": "Returning",
-  "consistently": "Training consistently",
-};
+// Rana's split: its name, a one-line summary, and the user's actual week —
+// all seven days, Monday first, each training day on the weekday it will
+// always fall on (fixed weekly schedule), rest days marked as rest. Drawn by
+// plan-view.js, the same code the Plan tab uses.
+function buildPlanHero(ranaDef, data, profile) {
+  const summary = Rana.planView.ranaSummary(ranaDef, data, profile);
+  document.getElementById("plan-hero-name").textContent = summary.name;
+  document.getElementById("plan-hero-meta").textContent = summary.meta;
+  Rana.planView.renderWeek(document.getElementById("plan-hero-week"), { weekdayMap: ranaDef.weekday_map, data, profile });
+  document.getElementById("plan-hero-why").textContent = summary.why;
+}
 
-function buildPlanHero(split, plan, data, profile) {
-  // "Upper / Lower (4-Day)" → "Upper / Lower". The parenthetical either
-  // repeats the day count or lists the days, both of which the week list
-  // below already shows.
-  document.getElementById("plan-hero-name").textContent = split.split_name.split(" (")[0];
+// The user's own plan (if they built one) and which of the two is active.
+// Lock-in starts whichever is active; nothing is locked in until then.
+function buildPlanChoice(saved, plan, data, profile) {
+  const activeId = plan.active_plan_id || "rana";
+  const ownCard = document.getElementById("own-card");
+  const ranaCard = document.getElementById("rana-card");
 
-  const trainingDays = Rana.plan.WEEKDAY_ORDER.filter((d) => plan.weekday_map[d]);
-  document.getElementById("plan-hero-meta").textContent =
-    `${trainingDays.length} days / week · ~${split.est_session_minutes} min sessions · ` +
-    `${split.primary_goal} · ${FITNESS_LEVEL_LABEL[profile.fitness_level] || ""}`;
+  if (saved.own) {
+    ownCard.hidden = false;
+    const summary = Rana.planView.ownSummary(saved.own);
+    document.getElementById("own-name").textContent = summary.name;
+    document.getElementById("own-meta").textContent = summary.meta;
+    Rana.planView.renderWeek(document.getElementById("own-week"), {
+      weekdayMap: saved.own.weekday_map, ownDayNames: saved.own.own_day_names, data, profile,
+    });
+    document.getElementById("build-own-btn").hidden = true;
 
-  const weekEl = document.getElementById("plan-hero-week");
-  weekEl.innerHTML = "";
-  Rana.plan.WEEKDAY_ORDER.forEach((day) => {
-    const workout = data.workoutById.get(plan.weekday_map[day]);
-    const li = document.createElement("li");
-    li.className = workout ? "plan-hero-day" : "plan-hero-day plan-hero-day--rest";
+    // With two plans, show which one lock-in will start.
+    [["rana", ranaCard], ["own", ownCard]].forEach(([id, card]) => {
+      card.querySelector(".plan-card-active").hidden = id !== activeId;
+      card.querySelector(".plan-card-activate").hidden = id === activeId;
+      card.classList.toggle("plan-card--active", id === activeId);
+    });
+  }
 
-    const dayEl = document.createElement("span");
-    dayEl.className = "plan-hero-dow";
-    dayEl.textContent = day;
-
-    const body = document.createElement("span");
-    body.className = "plan-hero-day-body";
-    const name = document.createElement("span");
-    name.className = "plan-hero-workout";
-    name.textContent = workout ? workout.day_name : "Rest";
-    body.appendChild(name);
-    if (workout) {
-      const focus = document.createElement("span");
-      focus.className = "plan-hero-focus";
-      focus.textContent = workout.session_focus;
-      body.appendChild(focus);
-    }
-
-    li.append(dayEl, body);
-    weekEl.appendChild(li);
+  document.querySelectorAll(".plan-card-activate").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      Rana.plan.activatePlan(btn.dataset.plan); // still a draft, so this just swaps the week
+      window.location.reload();
+    });
   });
-
-  document.getElementById("plan-hero-why").textContent = `Built for: ${split.best_for}`;
 }
 
 // --- Sequenced reveal ---
@@ -216,7 +207,7 @@ function skipReveal() {
 }
 
 document.getElementById("results-screen").addEventListener("click", (event) => {
-  if (event.target.id === "lock-in-btn") return; // don't let the tap-to-skip eat the real button
+  if (event.target.closest("button, a")) return; // don't let the tap-to-skip eat a real button or link
   skipReveal();
 });
 
@@ -232,14 +223,19 @@ async function main() {
   const data = await Rana.data.load();
   // Re-read: loading the data may have repaired a plan whose split was removed.
   plan = Rana.storage.getPlan();
-  const split = data.splitById.get(plan.split_id);
+  const saved = Rana.storage.getSavedPlans();
+  const ranaDef = saved.rana || { split_id: plan.split_id, weekday_map: plan.weekday_map };
+  const split = data.splitById.get(ranaDef.split_id);
 
-  buildPlanHero(split, plan, data, profile);
+  buildPlanHero(ranaDef, data, profile);
+  buildPlanChoice(saved, plan, data, profile);
 
-  // Sessions per week = weekdays that actually have a workout assigned
-  // (if someone picks more days than the split has, the extras are rest).
-  const sessionsPerWeek = Object.values(plan.weekday_map || {}).filter(Boolean).length || split.days_per_week;
-  buildRoute(Rana.game.forecastRoute(sessionsPerWeek, split.deload_every_weeks));
+  // The route follows the ACTIVE plan. Sessions per week = weekdays that
+  // actually have a workout (if someone picks more days than the split has,
+  // the extras are rest). An own plan has no deload weeks.
+  const ownActive = (plan.active_plan_id || "rana") === "own";
+  const sessionsPerWeek = Rana.plan.trainingDayCount(plan.weekday_map) || split.days_per_week;
+  buildRoute(Rana.game.forecastRoute(sessionsPerWeek, ownActive ? null : split.deload_every_weeks));
 
   const quotes = await fetch("data/quotes.json").then((r) => r.json());
   const resultsQuotes = quotes.filter((q) => q.context.includes("results"));

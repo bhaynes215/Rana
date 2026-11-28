@@ -285,7 +285,7 @@ function buildFreestyleCard(exerciseKey) {
 // "add your first exercise" note when empty. Suggested workout: update the
 // abs chooser so added exercises show as picked.
 function refreshFreestyleEmptyState() {
-  if (session.type === "freestyle") {
+  if (buildsOwnWorkout(session)) {
     document.getElementById("empty-note").hidden = session.exercises.length > 0;
   } else if (refreshAbsChooser) {
     refreshAbsChooser();
@@ -371,6 +371,12 @@ function openPicker() {
 // ?session=ID resumes a specific workout. ?date=YYYY-MM-DD starts (or
 // resumes) the suggested workout for that day. Only one workout can be in
 // progress at a time, so if a different one already is, go to that one.
+// True for workouts the user builds exercise by exercise: freestyle, and the
+// days of their own plan (no library workout behind them).
+function buildsOwnWorkout(s) {
+  return s.type === "freestyle" || s.workout_id === Rana.plan.OWN_WORKOUT;
+}
+
 function resolveSession() {
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get("session");
@@ -422,10 +428,13 @@ async function main() {
   // Keep the address in step with the workout, so a reload resumes it.
   window.history.replaceState(null, "", `active-session.html?session=${session.session_id}`);
 
-  const isFreestyle = session.type === "freestyle";
+  // Freestyle workouts and days in the user's own plan both start empty:
+  // the user adds every exercise with the picker.
+  const isFreestyle = buildsOwnWorkout(session);
   if (!session.exercises) session.exercises = []; // older records
   document.getElementById("session-title").textContent = Rana.plan.sessionTitle(session, data);
-  document.getElementById("session-eyebrow").textContent = isFreestyle ? "Logging · Freestyle" : "Logging · Suggested workout";
+  document.getElementById("session-eyebrow").textContent =
+    session.type === "freestyle" ? "Logging · Freestyle" : isFreestyle ? "Logging · Your plan" : "Logging · Suggested workout";
 
   const list = document.getElementById("slot-list");
   list.innerHTML = "";

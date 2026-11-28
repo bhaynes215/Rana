@@ -59,6 +59,11 @@ function formatDuration(session) {
 // A "record" is a strength gain at or above NEW_RECORD_PERCENT; hitting
 // the per-exercise cap adds a MAX GAIN badge. Small gains land quietly.
 // Lines are ordered so the biggest strength gain comes last, for drama.
+// A workout on a day of the user's own plan (they built it while logging).
+function isOwnPlanSession(session) {
+  return session.type === "planned" && session.workout_id === Rana.plan.OWN_WORKOUT;
+}
+
 function buildLines(session, after, data) {
   const rules = Rana.game.XP_RULES;
   const entry = after.entries.get(session.date);
@@ -82,7 +87,7 @@ function buildLines(session, after, data) {
   if (earnedHere) {
     lines.push({
       kind: "session",
-      label: entry.completed ? "Suggested workout complete" : "Session complete",
+      label: entry.completed ? (isOwnPlanSession(session) ? "Your plan's workout complete" : "Suggested workout complete") : "Session complete",
       detail: entry.completed ? "" : "off-plan",
       xp: entry.sessionXp,
     });
@@ -101,6 +106,8 @@ function buildLines(session, after, data) {
     lines.push({ kind: "note", label: "Today's session XP was already earned by another workout." });
   } else if (entry && entry.restDay) {
     lines.push({ kind: "note", label: "Rest-day workout: strength gains only. Rest is part of the plan." });
+  } else if (isOwnPlanSession(session)) {
+    lines.push({ kind: "note", label: `Log at least ${rules.FREESTYLE_MIN_SETS} sets for it to count as following your plan.` });
   } else if (session.type === "planned") {
     lines.push({ kind: "note", label: "Under half the suggested workout was logged, so it didn't count as following the plan." });
   } else {
@@ -131,7 +138,7 @@ function buildRecap(session, sets, after, data) {
   const increaseByExercise = new Map(sessionEntry.increases.map((i) => [i.exerciseKey, i]));
 
   document.getElementById("recap-kind").textContent =
-    `${session.type === "planned" ? "Suggested workout" : "Freestyle"} · ` +
+    `${isOwnPlanSession(session) ? "Your plan" : session.type === "planned" ? "Suggested workout" : "Freestyle"} · ` +
     new Date(session.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
   document.getElementById("recap-title").textContent = Rana.plan.sessionTitle(session, data);
 

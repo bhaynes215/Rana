@@ -163,6 +163,20 @@ Rana.dashboard = (() => {
         trainedToday: todayFinished.length > 0,
         summarySessionId: lastFinishedToday ? lastFinishedToday.session_id : null,
       };
+    } else if (todaySession.isOwnWorkout) {
+      // A day in the user's own plan: just its name. There's no exercise list
+      // to count or time, because they build the workout while logging.
+      today = {
+        isRestDay: false,
+        isOwnWorkout: true,
+        dayName: todaySession.workout.day_name,
+        focusMuscles: "You build this workout",
+        statYield: [],
+        completed: todaySession.status === "completed",
+        trainedToday: todayFinished.length > 0,
+        summarySessionId: (plannedFinishedToday || lastFinishedToday || {}).session_id || null,
+        limitationNote: null,
+      };
     } else {
       const slots = todaySession.slots;
       // The SUGGESTED exercise for each slot: the main one, unless it loads

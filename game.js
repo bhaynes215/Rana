@@ -236,7 +236,16 @@ Rana.game = (() => {
         // don't push it over the line.
         const prescribed = scheduled.slots.reduce((sum, s) => sum + s.working_sets, 0);
         let plannedDone = null;
-        for (const s of daySessions.filter((x) => x.type === "planned")) {
+        // A day in the user's OWN plan has no prescription (they build the
+        // workout while logging), so it counts as following the plan once a
+        // planned session that day has at least FREESTYLE_MIN_SETS sets.
+        if (scheduled.isOwnWorkout) {
+          plannedDone =
+            daySessions.find(
+              (x) => x.type === "planned" && (setsBySession.get(x.session_id) || []).length >= XP_RULES.FREESTYLE_MIN_SETS
+            ) || null;
+        }
+        for (const s of scheduled.isOwnWorkout ? [] : daySessions.filter((x) => x.type === "planned")) {
           const sets = setsBySession.get(s.session_id) || [];
           const credited = scheduled.slots.reduce((sum, slot) => {
             const logged = sets.filter((x) => x.slot_id === slot.slot_id).length;

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Your Own Plan — Rana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Semi+Condensed:wght@500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!--
+    Build (or edit) the user's own plan. A plan here is only the week: which
+    weekdays are training days and what each one is called. There are no
+    exercises in it — on each training day, the user builds the workout from
+    the exercise library while logging. Saved by plan-builder.js through
+    Rana.plan.updateSavedPlan. No tab bar on this screen: it's a focused task
+    with its own Save and Cancel.
+  -->
+  <main class="screen builder">
+    <button type="button" id="cancel-btn" class="back-link builder-back">← Cancel</button>
+
+    <header>
+      <p class="today-eyebrow">Your own plan</p>
+      <h1 id="builder-title" class="history-title">Build your own plan</h1>
+      <p class="history-summary">Pick your training days and name each one. On the day, you build the workout from the exercise library.</p>
+    </header>
+
+    <div class="field">
+      <label for="plan-name">Plan name</label>
+      <input id="plan-name" type="text" maxlength="40" autocomplete="off">
+    </div>
+
+    <p id="builder-count" class="builder-count"></p>
+
+    <ol id="builder-days" class="builder-days"></ol>
+
+    <p id="builder-status" class="status-message" aria-live="polite"></p>
+    <button type="button" id="save-btn" class="btn-continue">Save plan</button>
+  </main>
+
+  <script src="data.js" defer></script>
+  <script src="storage.js" defer></script>
+  <script src="plan.js" defer></script>
+  <script src="ui.js" defer></script>
+  <script src="plan-builder.js" defer></script>
+</body>
+</html>

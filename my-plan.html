@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Plans — Rana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Semi+Condensed:wght@500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!--
+    The Plan tab: Rana's suggested plan and (optionally) one the user built.
+    Exactly one is ACTIVE; the dashboard follows it. "Set active" switches
+    from today (or tomorrow, if a workout was already done today), and the
+    past keeps the plan that was active then. Built by my-plan.js.
+  -->
+  <main class="screen history">
+    <header class="history-head">
+      <h1 class="history-title">Your plans</h1>
+      <p class="history-summary">One plan is active at a time. Your dashboard follows it.</p>
+    </header>
+
+    <p id="switch-note" class="session-note" hidden></p>
+
+    <section id="rana-card" class="panel plan-card" aria-labelledby="rana-name">
+      <div class="plan-card-head">
+        <p class="today-eyebrow">Rana's plan</p>
+        <span class="plan-card-active" hidden>Active</span>
+      </div>
+      <h2 id="rana-name" class="plan-card-name"></h2>
+      <p id="rana-meta" class="plan-hero-meta"></p>
+      <ol id="rana-week" class="plan-hero-week"></ol>
+      <p class="plan-card-hint">Tap a day to see its exercises.</p>
+      <button type="button" class="btn-secondary plan-card-activate" data-plan="rana" hidden>Set active</button>
+    </section>
+
+    <section id="own-card" class="panel plan-card" aria-labelledby="own-name" hidden>
+      <div class="plan-card-head">
+        <p class="today-eyebrow">Your plan</p>
+        <span class="plan-card-active" hidden>Active</span>
+      </div>
+      <h2 id="own-name" class="plan-card-name"></h2>
+      <p id="own-meta" class="plan-hero-meta"></p>
+      <ol id="own-week" class="plan-hero-week"></ol>
+      <button type="button" class="btn-secondary plan-card-activate" data-plan="own" hidden>Set active</button>
+      <div class="plan-card-actions">
+        <a href="plan-builder.html" class="btn-quiet btn-quiet--accent">Edit</a>
+        <button type="button" id="delete-own-btn" class="btn-quiet btn-quiet--danger">Delete</button>
+      </div>
+    </section>
+
+    <section id="build-card" class="panel plan-card plan-card--empty" hidden>
+      <p class="today-eyebrow">Your plan</p>
+      <h2 class="plan-card-name">Build your own</h2>
+      <p class="plan-hero-meta">Choose your training days and name each one. On the day, you build the workout from the exercise library.</p>
+      <a href="plan-builder.html" class="btn-continue btn-link">Build your own plan</a>
+    </section>
+  </main>
+
+  <script src="data.js" defer></script>
+  <script src="storage.js" defer></script>
+  <script src="plan.js" defer></script>
+  <script src="ui.js" defer></script>
+  <script src="plan-view.js" defer></script>
+  <script src="nav.js" defer></script>
+  <script src="my-plan.js" defer></script>
+</body>
+</html>

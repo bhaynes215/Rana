@@ -252,7 +252,15 @@ async function finish() {
     };
 
     Rana.storage.saveProfile(profile);
-    Rana.storage.savePlan(plan);
+    Rana.storage.savePlan({ ...plan, active_plan_id: "rana" });
+    // A fresh questionnaire starts over with Rana's new plan and no own plan.
+    Rana.storage.resetSavedPlans({
+      plan_id: "rana",
+      kind: "suggested",
+      split_id: splitId,
+      training_weekdays: profile.training_weekdays,
+      weekday_map: { ...weekdayMap },
+    });
 
     window.location.href = "results.html";
   } catch (err) {

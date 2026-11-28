@@ -33,6 +33,10 @@ Rana.storage = (() => {
   const KEYS = {
     profile: "rana:v1:profile",
     plan: "rana:v1:plan",
+    // The user's two plan definitions: Rana's suggested one and (optionally)
+    // one they built themselves. Only one is active; the active one is copied
+    // into `plan` above, which is what every screen reads.
+    savedPlans: "rana:v1:saved_plans",
     loggedSets: "rana:v1:logged_sets",
     sessions: "rana:v1:sessions",
     // Legacy: difficulty used to be saved per DATE here. It now lives on the
@@ -70,6 +74,43 @@ Rana.storage = (() => {
   }
   function savePlan(plan) {
     write(KEYS.plan, plan);
+  }
+
+  // --- Saved plans: { rana: {...} | null, own: {...} | null } ---
+  //   rana: { plan_id: "rana", kind: "suggested", split_id, training_weekdays, weekday_map }
+  //   own:  { plan_id: "own", kind: "own", name, weekday_map, own_day_names, created_at }
+  // Users from before 2026-11-27 have no saved plans yet: their current plan
+  // becomes the saved "rana" plan the first time this is read.
+  function getSavedPlans() {
+    const saved = read(KEYS.savedPlans, null);
+    if (saved) return { rana: saved.rana || null, own: saved.own || null };
+    const plan = getPlan();
+    const migrated = { rana: null, own: null };
+    if (plan && (plan.active_plan_id || "rana") === "rana") {
+      migrated.rana = {
+        plan_id: "rana",
+        kind: "suggested",
+        split_id: plan.split_id,
+        training_weekdays: plan.training_weekdays,
+        weekday_map: { ...plan.weekday_map },
+      };
+      write(KEYS.savedPlans, migrated);
+    }
+    return migrated;
+  }
+  function saveSavedPlan(def) {
+    const saved = getSavedPlans();
+    saved[def.plan_id] = def;
+    write(KEYS.savedPlans, saved);
+  }
+  function deleteSavedPlan(planId) {
+    const saved = getSavedPlans();
+    saved[planId] = null;
+    write(KEYS.savedPlans, saved);
+  }
+  // A fresh questionnaire starts over: Rana's new plan, no own plan.
+  function resetSavedPlans(ranaDef) {
+    write(KEYS.savedPlans, { rana: ranaDef, own: null });
   }
 
   // --- Migration of older data ---
@@ -263,6 +304,10 @@ Rana.storage = (() => {
     saveProfile,
     getPlan,
     savePlan,
+    getSavedPlans,
+    saveSavedPlan,
+    deleteSavedPlan,
+    resetSavedPlans,
     getSessions,
     getSession,
     getFinishedSessions,
