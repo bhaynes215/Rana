@@ -1,0 +1,40 @@
+/* Workout summary: the layout around the shared components. */
+
+.summary { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.summary-header { display: flex; align-items: center; gap: var(--space-2); height: var(--tap-min); }
+.summary-header .btn--icon { margin-left: -10px; }
+.summary-header__title { flex: 1; font-size: var(--text-md); line-height: 20px; font-weight: 700; text-align: center; }
+.summary-header .summary-header__spacer { width: var(--tap-min); margin-right: -10px; }
+
+/* The one bold element: the XP this workout earned. */
+.summary-xp { display: flex; flex-direction: column; gap: var(--space-3); }
+.summary-xp__total { display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* The XP lines: a quiet list, landing one at a time. */
+.xp-lines { display: flex; flex-direction: column; }
+.xp-line { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); }
+.xp-line:last-child { border-bottom: 0; }
+.xp-line__label { font-weight: 600; }
+.xp-line__detail { color: var(--color-ink-muted); font-size: var(--text-sm); }
+.xp-line__xp { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+.xp-line--target .xp-line__xp { color: var(--color-accent-strong); }
+.summary-note { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); text-wrap: pretty; }
+
+/* Lines wait their turn (only while the reveal is running). */
+.is-pending { opacity: 0; transform: translateY(8px); }
+.is-in { opacity: 1; transform: none; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+
+.summary-level { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* The recap and the editor. */
+.summary-recap { display: flex; flex-direction: column; gap: var(--space-3); }
+.summary-recap__head { display: flex; flex-direction: column; gap: 2px; }
+.editor { display: flex; flex-direction: column; gap: var(--space-4); }
+.editor__name { font-weight: 700; margin-bottom: var(--space-1); }
+.edit-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 12px minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); }
+.edit-row__n { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.edit-row__times { color: var(--color-ink-muted); text-align: center; }
+.edit-row.is-removed .set-input { opacity: 0.4; text-decoration: line-through; }
+.edit-row .btn { min-width: 64px; padding: 0 var(--space-2); font-size: var(--text-sm); }
+.editor__actions { display: flex; flex-direction: column; gap: var(--space-2); }

@@ -7,6 +7,7 @@
 //   Rana.progress.exerciseHistory(key, { sets, sessions }) every finished session of one exercise
 //   Rana.progress.lastTime(key, { sets, sessions })        the previous session's sets (the "Last time" column)
 //   Rana.progress.recentSessions({ sessions, sets, ledger }, n)
+//   Rana.progress.workoutSummary({ session, sessions, sets, plan, data, profile })   what one workout earned
 //
 // Per-exercise history is the foundation of the agreed "per-exercise history"
 // feature (tap an exercise, see every session, the best and the trend):
@@ -143,5 +144,86 @@ Rana.progress = (() => {
       .map((session) => ({ session, xp: Rana.game.xpForSession(ledger, session), setCount: counts.get(session.session_id) || 0 }));
   }
 
-  return { addDays, mondayOf, liftRows, weeklyXp, exerciseHistory, lastTime, formatSet, recentSessions };
+  // ---------------------------------------------------------------------
+  // The summary of one finished workout
+  // ---------------------------------------------------------------------
+  // The XP ledger is run twice: over the whole history, and over the history
+  // WITHOUT this workout. The difference is what the workout earned, and
+  // comparing the two also shows whether it crossed a level or earned a
+  // title. Nothing is stored; see the design note at the top of game.js.
+  //
+  // `sessions` and `sets` are ALL finished ones (this workout included).
+  // Returns:
+  //   gained                      the XP this workout earned
+  //   lines                       [{ kind, label, detail, xp }] in the order they land:
+  //                               "session", "streak", "best", "target"
+  //   notes                       plain sentences for anything that earned no session XP
+  //   increases, targetHits       the raw strength increases and target hits
+  //   before, after               { xp, level, levelStartXp, nextLevelXp } for the level bar
+  //   levelBefore, levelAfter, tierBefore, tierAfter, newTitles
+  //   restDay                     the workout was on a rest day
+  function workoutSummary({ session, sessions, sets, plan, data, profile = null, today }) {
+    const rules = Rana.game.XP_RULES;
+    const ledgerOf = (s, x) => Rana.game.computeXpLedger({ sets: x, sessions: s, plan, data, profile, today });
+    // "After" means as of THIS workout: later workouts are left out, so looking
+    // back at an old workout shows the level it reached then, not today's.
+    const later = (x) => x.date > session.date || (x.date === session.date && (x.started_at || "") > (session.started_at || ""));
+    const laterIds = new Set(sessions.filter(later).map((x) => x.session_id));
+    const upTo = sessions.filter((x) => !laterIds.has(x.session_id));
+    const upToSets = sets.filter((x) => !laterIds.has(x.session_id));
+    const after = ledgerOf(upTo, upToSets);
+    const without = ledgerOf(upTo.filter((x) => x.session_id !== session.session_id), upToSets.filter((x) => x.session_id !== session.session_id));
+
+    const entry = after.entries.get(session.date);
+    const sessionEntry = after.sessionEntries.get(session.session_id) || { increases: [], targetHits: [] };
+    const nameOf = (key) => (data.exerciseByKey.get(key) || {}).exercise_name || key;
+    const own = session.type === "planned" && session.workout_id === Rana.plan.OWN_WORKOUT;
+
+    const lines = [];
+    const notes = [];
+    const earnedHere = entry && entry.xpSessionId === session.session_id;
+    if (earnedHere) {
+      lines.push({ kind: "session", label: "Workout completed", detail: entry.completed ? "" : "off-plan", xp: entry.sessionXp });
+      if (entry.completed && entry.streakBonusXp > 0) lines.push({ kind: "streak", label: "Streak bonus", detail: `${entry.streak} in a row`, xp: entry.streakBonusXp });
+      if (entry.offPlan) notes.push("Off-plan workout: your streak is held, not grown.");
+    } else if (entry && entry.xpSessionId) {
+      notes.push("Today's session XP was already earned by another workout.");
+    } else if (entry && entry.restDay) {
+      notes.push("Rest day: strength XP only. Rest is part of the plan.");
+    } else if (own) {
+      notes.push(`Log at least ${rules.FREESTYLE_MIN_SETS} sets for it to count as following your plan.`);
+    } else if (session.type === "planned") {
+      notes.push("Under half the suggested workout was logged, so it didn't count as following the plan.");
+    } else {
+      notes.push(`Log at least ${rules.FREESTYLE_MIN_SETS} sets to earn session XP.`);
+    }
+    [...sessionEntry.increases].sort((a, b) => a.xp - b.xp).forEach((inc) => {
+      lines.push({ kind: "best", label: `New best: ${nameOf(inc.exerciseKey)}`, detail: `+${inc.percent.toFixed(1)}%${inc.mode === "bodyweight" ? " reps" : ""}`, xp: inc.xp });
+    });
+    sessionEntry.targetHits.forEach((hit) => {
+      lines.push({ kind: "target", label: `Target hit: ${nameOf(hit.exerciseKey)}`, detail: `${hit.value} ${hit.unit}`, xp: hit.xp });
+    });
+
+    const bar = (xp) => {
+      const level = Rana.game.levelForXp(xp);
+      return { xp, level, levelStartXp: Rana.game.xpForLevel(level), nextLevelXp: Rana.game.xpForLevel(level + 1) };
+    };
+    const before = bar(without.totalXp);
+    const afterBar = bar(after.totalXp);
+    const titlesBefore = new Set(Rana.game.earnedTitles(without).map((t) => t.name));
+
+    return {
+      gained: after.totalXp - without.totalXp,
+      lines, notes,
+      increases: sessionEntry.increases,
+      targetHits: sessionEntry.targetHits,
+      before, after: afterBar,
+      levelBefore: before.level, levelAfter: afterBar.level,
+      tierBefore: Rana.game.tierForLevel(before.level), tierAfter: Rana.game.tierForLevel(afterBar.level),
+      newTitles: Rana.game.earnedTitles(after).filter((t) => !titlesBefore.has(t.name)),
+      restDay: Boolean(entry && entry.restDay),
+    };
+  }
+
+  return { addDays, mondayOf, liftRows, weeklyXp, exerciseHistory, lastTime, formatSet, recentSessions, workoutSummary };
 })();

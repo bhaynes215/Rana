@@ -640,5 +640,25 @@ check("elapsed time", WK.elapsedText("2027-01-04T16:00:00.000Z", new Date("2027-
 check("tempo reads in words", WK.tempoText("3-1-1-0") === "Tempo 3-1-1-0: 3 s down, 1 s pause, 1 s up." && WK.tempoText("2-0-1-1") === "Tempo 2-0-1-1: 2 s down, no pause, 1 s up, 1 s squeeze at the top." && WK.tempoText("") === null);
 check("every prescribed tempo in the library reads", data.slots.every((sl) => !sl.tempo || WK.tempoText(sl.tempo)), data.slots.filter((sl) => sl.tempo && !WK.tempoText(sl.tempo)).map((sl) => sl.tempo).join(","));
 
+// ---------- 14. The summary of one finished workout ----------
+console.log("");
+const summarize = (session, parts, plan, today, profile = null) => Rana.progress.workoutSummary({ session, sessions: parts.map((p) => p.session), sets: parts.flatMap((p) => p.sets), plan, data, profile, today });
+const hitParts = [...calSessions, hitSession];
+const hitSummary = summarize(hitSession.session, hitParts, plan3, mondays[3], RETURNING);
+const lineSum = (sm) => sm.lines.reduce((a, l) => a + l.xp, 0);
+check("a target hit is a line of its own with the +500", hitSummary.lines.some((l) => l.kind === "target" && l.xp === 500 && l.label.startsWith("Target hit:") && l.detail === "295 lb"), JSON.stringify(hitSummary.lines.map((l) => [l.kind, l.xp])));
+check("the lines add up exactly to the XP gained", lineSum(hitSummary) === hitSummary.gained, `${lineSum(hitSummary)} vs ${hitSummary.gained}`);
+check("a normal workout lists session XP, then the streak bonus, then new bests", hitSummary.lines[0].kind === "session" && hitSummary.lines[0].xp === 100 && hitSummary.lines.findIndex((l) => l.kind === "best") > hitSummary.lines.findIndex((l) => l.kind === "session"));
+const plainSummary = summarize(calSessions[0].session, calSessions, plan3, mondays[2], RETURNING);
+check("a first workout has just session XP and no notes", plainSummary.lines.length >= 1 && plainSummary.lines[0].label === "Workout completed" && plainSummary.notes.length === 0 && plainSummary.gained === lineSum(plainSummary));
+check("level before and after come from the ledger", hitSummary.levelBefore <= hitSummary.levelAfter && hitSummary.after.xp - hitSummary.before.xp === hitSummary.gained && hitSummary.before.nextLevelXp === Rana.game.xpForLevel(hitSummary.levelBefore + 1));
+const restWorkout = freestyleSession(addDays(S2, 1), K, 3); // a Tuesday: a rest day on this plan
+const restSummary = summarize(restWorkout.session, [restWorkout], plan3, addDays(S2, 1));
+check("a rest-day workout earns no session XP and says why", restSummary.restDay === true && restSummary.lines.every((l) => l.kind !== "session") && restSummary.notes[0].startsWith("Rest day"));
+const shortFree = freestyleSession(mondays[0], K, 2);
+const shortSummary = summarize(shortFree.session, [shortFree], plan3, mondays[0]);
+check("a freestyle workout under 3 sets says how many it needs", shortSummary.lines.length === 0 && shortSummary.notes[0].includes("at least 3 sets"));
+check("the summary line follows the summary: a target hit wins", Rana.coach.summaryLine({ data, targetHits: hitSummary.targetHits, levelBefore: hitSummary.levelBefore, levelAfter: hitSummary.levelAfter, increases: hitSummary.increases, sets: 18, minutes: 50, restDay: false }).kind === "target");
+
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

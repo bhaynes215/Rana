@@ -566,6 +566,13 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 
 **Check:** a target-hit workout shows the +500 line and the cheer; editing the hitting set away removes it; logbook mode has no animation.
 
+**As built (Phase 7):** `workout-summary.html` + `js/pages/workout-summary.js` + `css/pages/workout-summary.css`; the old `session-complete.*` is deleted. The numbers come from the new tested `Rana.progress.workoutSummary` (the ledger run with and without the workout, **as of that workout**: later workouts are left out, so an old workout shows the level it reached then).
+- Right after finishing: no tab bar, header "Workout done", Rana's line (cheer for a target hit, level-up or new best, else wave), "+685 XP" counting up while the lines land (session, streak, each new best, each target hit), then the level bar fills (a level-up fills the old level first). Tap anywhere skips; reduced motion shows the final state.
+- Logbook (`?from=history`): final state at once, Progress tab bar, back arrow to `history.html`, "Back to history" button.
+- Edit (both modes): fix weight/reps, Remove/Undo per set, delete the workout (confirm sheets); saving returns to the logbook view. Tested: changing a squat from 300 to 100 removed the target hit, the new best and their XP; the delete confirm; the validation message.
+- Tier changes and new titles show as one quiet line ("New milestone on your Profile: ...").
+- Tested: summary tests (section 14 of `scripts/test_leveling.js`), the animated reveal, skip, the logbook and the editor, on 127.0.0.1 at 390 px.
+
 ### Phase 8: Progress (`progress.html`) and History
 **Build:**
 - **`progress.html`:**
