@@ -1,14 +1,122 @@
-// Small UI helpers shared by several screens (loaded as a plain <script>,
-// like every other module, and attached to the Rana namespace).
+// UI primitives shared by every screen: building elements, buttons, page
+// transitions, number-only fields, and the sheet (a panel that rises from the
+// bottom). The visual components built on top of these (Rana, bubbles, bars,
+// option cards, the set table...) are in components.js and extend the same
+// `Rana.ui` object, so load this file first.
 //
-//   Rana.ui.numericField(input, { decimal })   a number-only text box
-//   Rana.ui.prescription(slot, { showRest })    the "3 sets × 8-10 reps · RPE 8 (i)" line
-//   Rana.ui.infoButton(key)                     a small (i) button that opens an explanation
-//   Rana.ui.confirm({ message, confirmLabel })  an in-page "are you sure?"; resolves true or false
+//   Rana.ui.el(tag, className, content, attrs)   build an element (see below)
+//   Rana.ui.button({ label, kind, icon, href, onClick })
+//   Rana.ui.iconButton({ icon, label, onClick })
+//   Rana.ui.transition(update, { direction })     change the page with a smooth transition
+//   Rana.ui.numericField(input, { decimal })      make a text box digits-only
+//   Rana.ui.sheet({ title, content, actions })    a bottom sheet; returns { element, close, result }
+//   Rana.ui.confirm({ message, confirmLabel })    an in-page "are you sure?"; resolves true or false
+//   Rana.ui.infoButton("rpe")                     a small (i) that explains a term
+//   Rana.ui.prescription(slot)                    "3 sets of 6–8 reps, RPE 8 (i), rest 2:30"
+//   Rana.ui.format.clock(150) / .range("6-8") / .number(1840)
+//
+// Never use window.confirm / alert / prompt in this app: the Claude app's
+// built-in browser blocks them and answers "no". Use confirm() and sheet().
 
 window.Rana = window.Rana || {};
 
 Rana.ui = (() => {
+  // ---------------------------------------------------------------------
+  // Building elements
+  // ---------------------------------------------------------------------
+  // el("p", "muted", "Hello")            a <p class="muted">Hello</p>
+  // el("div", "card", [child1, child2])   children can be strings, nodes or arrays
+  // el("button", "btn", "Go", { type: "button", "aria-label": "Go" })
+  // `null`, `undefined` and `false` content/attributes are skipped, so
+  // `cond && node` works inline.
+  function append(parent, content) {
+    if (content === null || content === undefined || content === false) return;
+    if (Array.isArray(content)) content.forEach((c) => append(parent, c));
+    else parent.append(content instanceof Node ? content : String(content));
+  }
+
+  function el(tag, className, content, attrs) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    append(node, content);
+    if (attrs) {
+      for (const [name, value] of Object.entries(attrs)) {
+        if (value === null || value === undefined || value === false) continue;
+        node.setAttribute(name, value === true ? "" : String(value));
+      }
+    }
+    return node;
+  }
+
+  // ---------------------------------------------------------------------
+  // Small formatters
+  // ---------------------------------------------------------------------
+  const format = {
+    // 150 -> "2:30"
+    clock(totalSeconds) {
+      const s = Math.max(0, Math.round(totalSeconds));
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    },
+    // "6-8" -> "6–8" (a real en dash reads better than a hyphen)
+    range(text) {
+      return String(text).replace(/-/g, "–");
+    },
+    // 1840 -> "1,840"
+    number(n) {
+      return Number(n).toLocaleString("en-US");
+    },
+  };
+
+  // ---------------------------------------------------------------------
+  // Buttons
+  // ---------------------------------------------------------------------
+  // kind: "primary" (one per screen, the bottom action), "secondary" (the
+  // quieter path), "text" (an underlined opt-out), "action" (a header action
+  // like Finish) or "plain" (a small inline action such as Add set).
+  // Give `href` and you get a link that looks the same.
+  function button({ label, kind = "primary", icon, href, onClick, compact = false, disabled = false, type = "button", ariaLabel }) {
+    const classes = `btn btn--${kind}${compact ? " btn--compact" : ""}`;
+    const node = href ? el("a", classes, null, { href }) : el("button", classes, null, { type });
+    if (icon) node.append(Rana.icons.svg(icon, { size: 20 }));
+    if (label) node.append(label);
+    if (ariaLabel) node.setAttribute("aria-label", ariaLabel);
+    if (disabled) node.disabled = true;
+    if (onClick) node.addEventListener("click", onClick);
+    return node;
+  }
+
+  // A 44 x 44 button holding only an icon. `label` is required (it is the
+  // button's accessible name, e.g. "Back" or "Exit workout").
+  function iconButton({ icon, label, onClick, href, size = 24 }) {
+    const node = href ? el("a", "btn btn--icon", null, { href }) : el("button", "btn btn--icon", null, { type: "button" });
+    node.setAttribute("aria-label", label);
+    node.append(Rana.icons.svg(icon, { size }));
+    if (onClick) node.addEventListener("click", onClick);
+    return node;
+  }
+
+  // ---------------------------------------------------------------------
+  // Page transitions
+  // ---------------------------------------------------------------------
+  // Runs `update` (which changes the page's content) inside a view
+  // transition, so the old content crossfades into the new instead of
+  // snapping. `direction` ("forward" | "back") adds a short slide, e.g.
+  // exercise to exercise. Browsers without the feature, or people who asked
+  // for reduced motion, just get the change instantly.
+  const prefersReducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function transition(update, { direction } = {}) {
+    if (!document.startViewTransition || prefersReducedMotion()) {
+      return Promise.resolve(update());
+    }
+    const root = document.documentElement;
+    if (direction) root.dataset.vt = direction;
+    const t = document.startViewTransition(update);
+    return t.finished.catch(() => {}).finally(() => {
+      delete root.dataset.vt;
+    });
+  }
+
   // ---------------------------------------------------------------------
   // Number-only fields
   // ---------------------------------------------------------------------
@@ -45,12 +153,127 @@ Rana.ui = (() => {
   }
 
   // ---------------------------------------------------------------------
-  // The explanations behind the (i) buttons
+  // Sheet: a panel that rises from the bottom
   // ---------------------------------------------------------------------
-  // Plain language, written for a college student who has never heard the
-  // term. The stat descriptions match how stats are earned in game.js
-  // (computeStatPoints) but stay qualitative on purpose, so changing a
-  // threshold there doesn't leave this text stale.
+  //   const s = Rana.ui.sheet({
+  //     title: "Name your workout",
+  //     content: someNode,                 // optional body
+  //     actions: [{ label: "Start", value: "go", kind: "primary" },
+  //               { label: "Cancel", value: null, kind: "secondary" }],
+  //   });
+  //   const answer = await s.result;       // the clicked action's value, or null if dismissed
+  //
+  // An action may have `onClick(close)` instead of closing by itself, e.g. to
+  // check a form first and only call close(value) when it is valid. An action
+  // with `autofocus: true` gets focus first (confirmations focus Cancel, so
+  // pressing Enter never destroys anything). Escape and a tap on the dimmed
+  // area dismiss the sheet unless `dismissible: false`.
+  const openSheets = []; // the last one is on top and owns Escape and Tab
+  let sheetCount = 0;
+
+  function sheet({ title, subtitle, message, content, actions = [], dismissible = true, role = "dialog", label }) {
+    const id = `sheet-${++sheetCount}`;
+    const backdrop = el("div", "sheet-backdrop");
+    const panel = el("div", "sheet", null, { role, "aria-modal": "true", tabindex: "-1" });
+    if (title) {
+      panel.append(el("h2", "sheet__title", title, { id: `${id}-title` }));
+      panel.setAttribute("aria-labelledby", `${id}-title`);
+    } else {
+      panel.setAttribute("aria-label", label || message || "Dialog");
+    }
+    if (subtitle) panel.append(el("p", "sheet__sub", subtitle));
+    if (message) panel.append(el("p", "sheet__message", message));
+    if (content) panel.append(content);
+
+    let resolveResult;
+    const result = new Promise((resolve) => { resolveResult = resolve; });
+    const previousFocus = document.activeElement;
+    let closed = false;
+
+    function close(value = null) {
+      if (closed) return;
+      closed = true;
+      resolveResult(value);
+      openSheets.splice(openSheets.indexOf(api), 1);
+      document.removeEventListener("keydown", onKeydown, true);
+      if (!openSheets.length) document.body.classList.remove("sheet-open");
+      backdrop.classList.remove("is-open");
+      // Remove after the slide-out. With reduced motion there is no
+      // transition to wait for, so remove it right away.
+      if (prefersReducedMotion()) backdrop.remove();
+      else {
+        backdrop.addEventListener("transitionend", () => backdrop.remove(), { once: true });
+        setTimeout(() => backdrop.remove(), 400); // safety net if the event never fires
+      }
+      if (previousFocus && previousFocus.focus) previousFocus.focus({ preventScroll: true });
+    }
+
+    let autofocusTarget = null;
+    if (actions.length) {
+      const bar = el("div", "sheet__actions");
+      actions.forEach((action) => {
+        const btn = button({ label: action.label, kind: action.kind || "secondary" });
+        btn.addEventListener("click", () => (action.onClick ? action.onClick(close) : close(action.value === undefined ? null : action.value)));
+        if (action.autofocus) autofocusTarget = btn;
+        bar.append(btn);
+      });
+      panel.append(bar);
+    }
+
+    function focusables() {
+      return Array.from(panel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'));
+    }
+    function onKeydown(event) {
+      if (openSheets[openSheets.length - 1] !== api) return; // only the top sheet reacts
+      if (event.key === "Escape" && dismissible) {
+        event.preventDefault();
+        event.stopPropagation();
+        close(null);
+      } else if (event.key === "Tab") {
+        const list = focusables();
+        if (!list.length) { event.preventDefault(); return; }
+        const first = list[0];
+        const last = list[list.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === panel)) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    }
+
+    backdrop.append(panel);
+    if (dismissible) backdrop.addEventListener("click", (event) => { if (event.target === backdrop) close(null); });
+    document.addEventListener("keydown", onKeydown, true);
+    document.body.classList.add("sheet-open");
+    document.body.append(backdrop);
+
+    const api = { element: panel, close, result };
+    openSheets.push(api);
+
+    // Two steps so the slide-in actually animates: first paint closed, then open.
+    void backdrop.offsetHeight;
+    backdrop.classList.add("is-open");
+    (autofocusTarget || focusables()[0] || panel).focus({ preventScroll: true });
+    return api;
+  }
+
+  // In-page confirmation (replaces window.confirm):
+  //   if (await Rana.ui.confirm({ message: "Delete it?", confirmLabel: "Delete" })) { ... }
+  // Resolves true on the confirm button; false on Cancel, Escape or a tap outside.
+  function confirm({ title, message, confirmLabel = "Yes", cancelLabel = "Cancel" }) {
+    return sheet({
+      title,
+      message,
+      role: "alertdialog",
+      actions: [
+        { label: confirmLabel, value: true, kind: "primary" },
+        { label: cancelLabel, value: false, kind: "secondary", autofocus: true },
+      ],
+    }).result.then((value) => value === true);
+  }
+
+  // ---------------------------------------------------------------------
+  // The (i) button: explains a term in a sheet
+  // ---------------------------------------------------------------------
+  // Plain language, written for a college student who has never heard the term.
   const INFO = {
     rpe: {
       title: "RPE",
@@ -58,7 +281,7 @@ Rana.ui = (() => {
       paragraphs: [
         "A 1–10 score for how hard a set felt, judged by how many more reps you could have done. It's how this plan tells you how heavy to go, without needing a number.",
       ],
-      list: [
+      scale: [
         ["10", "Nothing left. You couldn't do one more rep."],
         ["9", "About 1 rep left in the tank."],
         ["8", "About 2 reps left."],
@@ -66,223 +289,42 @@ Rana.ui = (() => {
       ],
       footer: "Each exercise lists a target RPE. Pick a weight where your last rep of the last set feels about that hard. A half-point (like 8.5) means somewhere in between.",
     },
-    STR: {
-      title: "Strength",
-      subtitle: "STR",
-      paragraphs: [
-        "How much force you can produce. It grows from heavy, low-rep sets of big lifts that work several joints at once, like squats, presses, rows and deadlifts.",
-      ],
-      footer: "Heavier work builds it fastest. The number after the arrow is your 12-week target if you follow the plan.",
-    },
-    AGI: {
-      title: "Agility",
-      subtitle: "AGI",
-      paragraphs: [
-        "Your control, balance and muscular endurance. It grows from single-arm and single-leg exercises (lunges, split squats, one-arm rows) and from higher-rep sets.",
-      ],
-      footer: "The number after the arrow is your 12-week target if you follow the plan.",
-    },
-    VIT: {
-      title: "Vitality",
-      subtitle: "VIT",
-      paragraphs: [
-        "Your total work capacity: how much training your body can handle. Every set you complete adds to it, with a bonus for hip-hinge and core work.",
-      ],
-      footer: "It's the stat that rewards simply doing the work. The number after the arrow is your 12-week target if you follow the plan.",
-    },
   };
-
-  // ---------------------------------------------------------------------
-  // The (i) button and its popover
-  // ---------------------------------------------------------------------
-  // One popover at a time, appended to <body> and positioned next to the
-  // button, so it's never clipped by the notched panels it sits in. It
-  // closes on a second tap, a tap elsewhere, Escape or scrolling.
-  let open = null; // { button, pop }
-
-  function closePopover(returnFocus) {
-    if (!open) return;
-    const { button, pop } = open;
-    pop.remove();
-    button.setAttribute("aria-expanded", "false");
-    document.removeEventListener("click", onOutsideClick);
-    document.removeEventListener("keydown", onKeydown);
-    window.removeEventListener("scroll", onScroll, true);
-    window.removeEventListener("resize", onResize);
-    open = null;
-    // preventScroll: moving focus must never scroll the page, because a scroll
-    // closes the popover (and would close the next one the moment it opens).
-    if (returnFocus) button.focus({ preventScroll: true });
-  }
-  function onOutsideClick(event) {
-    if (open && !open.pop.contains(event.target) && !open.button.contains(event.target)) closePopover(false);
-  }
-  function onKeydown(event) {
-    if (event.key === "Escape") closePopover(true);
-  }
-  // Scrolling moves the button out from under the popover, so it closes.
-  // A resize (rotating the phone, the address bar sliding away) just moves it.
-  function onScroll() {
-    closePopover(false);
-  }
-  function onResize() {
-    if (open) positionPopover(open.pop, open.button);
-  }
-
-  function element(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  function buildPopover(info) {
-    const pop = element("div", "info-pop");
-    pop.setAttribute("role", "dialog");
-    pop.setAttribute("aria-label", info.title);
-    pop.tabIndex = -1;
-
-    pop.appendChild(element("p", "eyebrow", info.subtitle));
-    pop.appendChild(element("h3", "info-pop-title", info.title));
-    info.paragraphs.forEach((text) => pop.appendChild(element("p", "info-pop-text", text)));
-
-    if (info.list) {
-      const list = element("dl", "info-pop-scale");
-      info.list.forEach(([label, text]) => {
-        const row = element("div");
-        row.append(element("dt", "num", label), element("dd", "", text));
-        list.appendChild(row);
-      });
-      pop.appendChild(list);
-    }
-
-    if (info.footer) pop.appendChild(element("p", "info-pop-footer", info.footer));
-
-    const done = element("button", "info-pop-done", "Got it");
-    done.type = "button";
-    done.addEventListener("click", () => closePopover(true));
-    pop.appendChild(done);
-    return pop;
-  }
-
-  // Places the popover under the button (or above it if there's no room),
-  // keeping it fully on screen, with a small caret pointing at the button.
-  function positionPopover(pop, button) {
-    const margin = 12;
-    const rect = button.getBoundingClientRect();
-    const width = pop.offsetWidth;
-    const height = pop.offsetHeight;
-
-    const left = Math.max(margin, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - margin));
-    const roomBelow = window.innerHeight - rect.bottom - margin;
-    const above = roomBelow < height + 10 && rect.top - margin > height + 10;
-    const top = above ? rect.top - height - 10 : rect.bottom + 10;
-
-    pop.style.left = `${left}px`;
-    // Always fully on screen, even on a short window or when the button is near an edge.
-    pop.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - height - margin))}px`;
-    pop.style.setProperty("--caret-x", `${rect.left + rect.width / 2 - left}px`);
-    pop.classList.toggle("info-pop--above", above);
-  }
 
   function infoButton(key) {
     const info = INFO[key];
-    const button = element("button", "info-btn", "i");
-    button.type = "button";
-    button.setAttribute("aria-label", `What is ${info.title}?`);
-    button.setAttribute("aria-haspopup", "dialog");
-    button.setAttribute("aria-expanded", "false");
-
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      if (open && open.button === button) {
-        closePopover(false);
-        return;
-      }
-      closePopover(false);
-
-      const pop = buildPopover(info);
-      document.body.appendChild(pop);
-      positionPopover(pop, button);
-      button.setAttribute("aria-expanded", "true");
-      open = { button, pop };
-      document.addEventListener("click", onOutsideClick);
-      document.addEventListener("keydown", onKeydown);
-      window.addEventListener("scroll", onScroll, true);
-      window.addEventListener("resize", onResize);
-      pop.focus({ preventScroll: true });
+    const node = el("button", "info-btn", Rana.icons.svg("info", { size: 20 }), {
+      type: "button",
+      "aria-label": `What is ${info.title}?`,
+      "aria-haspopup": "dialog",
     });
-    return button;
+    node.addEventListener("click", () => {
+      const body = el("div", "stack stack--tight");
+      info.paragraphs.forEach((text) => body.append(el("p", "t-md", text)));
+      if (info.scale) {
+        const dl = el("dl", "scale");
+        info.scale.forEach(([score, text]) => dl.append(el("div", "", [el("dt", "num", score), el("dd", "", text)])));
+        body.append(dl);
+      }
+      if (info.footer) body.append(el("p", "t-sm muted", info.footer));
+      sheet({ title: info.title, subtitle: info.subtitle, content: body, actions: [{ label: "Got it", kind: "primary" }] });
+    });
+    return node;
   }
 
   // ---------------------------------------------------------------------
-  // The prescription line: "3 sets × 8-10 reps · RPE 8 (i) · rest 120s"
+  // The prescription line: "3 sets of 6–8 reps, RPE 8 (i), rest 2:30"
   // ---------------------------------------------------------------------
-  // Used by both the session detail and the logging screen, so the RPE
-  // explanation is attached in exactly one place.
-  function prescription(slot, { showRest = false } = {}) {
-    const line = element("p", "slot-prescription");
-    const num = (value) => element("span", "num", String(value));
-
-    line.append(num(slot.working_sets), " sets × ", `${slot.rep_range} reps · RPE `, num(slot.target_rpe), infoButton("rpe"));
-    if (showRest) line.append(" · rest ", num(slot.rest_seconds), "s");
+  // The one place this line is built, so the RPE explanation is attached once.
+  function prescription(slot, { showRest = true } = {}) {
+    const line = el("p", "t-sm muted");
+    const num = (value) => el("span", "num", String(value));
+    const sets = Number(slot.working_sets);
+    line.append(`${sets} ${sets === 1 ? "set" : "sets"} of ${format.range(slot.rep_range)} reps`);
+    if (slot.target_rpe !== undefined && slot.target_rpe !== null) line.append(", RPE ", num(slot.target_rpe), infoButton("rpe"));
+    if (showRest && slot.rest_seconds) line.append(", rest ", num(format.clock(slot.rest_seconds)));
     return line;
   }
 
-  // ---------------------------------------------------------------------
-  // In-page confirmation (replaces window.confirm)
-  // ---------------------------------------------------------------------
-  // The browser's own confirm() popup is blocked in some places (the Claude
-  // app's built-in browser, embedded views, some mobile browsers). It just
-  // returns false, so a button that relied on it silently does nothing.
-  // This draws the question inside the page instead, so it always works.
-  //
-  //   if (await Rana.ui.confirm({ message: "Delete it?", confirmLabel: "Delete" })) { ... }
-  //
-  // Resolves true on the confirm button, false on Cancel, Escape, or a tap
-  // outside the box. Cancel is focused first, so Enter never destroys data.
-  function confirm({ message, confirmLabel = "Yes", cancelLabel = "Cancel" }) {
-    return new Promise((resolve) => {
-      const backdrop = element("div", "modal-backdrop");
-      const box = element("div", "panel panel--raised confirm-modal");
-      box.setAttribute("role", "alertdialog");
-      box.setAttribute("aria-modal", "true");
-      box.setAttribute("aria-label", message);
-
-      const text = element("p", "confirm-modal-text", message);
-      const actions = element("div", "confirm-modal-actions");
-      const cancelBtn = element("button", "btn-secondary", cancelLabel);
-      cancelBtn.type = "button";
-      const okBtn = element("button", "btn-continue", confirmLabel);
-      okBtn.type = "button";
-      actions.append(cancelBtn, okBtn);
-      box.append(text, actions);
-      backdrop.appendChild(box);
-
-      const previousFocus = document.activeElement;
-      function close(answer) {
-        document.removeEventListener("keydown", onKey, true);
-        backdrop.remove();
-        if (previousFocus && previousFocus.focus) previousFocus.focus();
-        resolve(answer);
-      }
-      function onKey(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          close(false);
-        }
-      }
-      cancelBtn.addEventListener("click", () => close(false));
-      okBtn.addEventListener("click", () => close(true));
-      backdrop.addEventListener("click", (event) => {
-        if (event.target === backdrop) close(false);
-      });
-      document.addEventListener("keydown", onKey, true);
-
-      document.body.appendChild(backdrop);
-      cancelBtn.focus();
-    });
-  }
-
-  return { numericField, prescription, infoButton, confirm };
+  return { el, append, format, button, iconButton, prefersReducedMotion, transition, numericField, sheet, confirm, infoButton, prescription };
 })();

@@ -1,0 +1,184 @@
+/*
+  Base styles: reset, type, the page shell, focus, motion, and page
+  transitions. Components live in components.css; anything only one screen
+  needs lives in css/pages/<page>.css.
+
+  Load order on every page: tokens.css, base.css, components.css, then the
+  page's own css.
+*/
+
+/* ---------------------------------------------------------------------
+   Fallback fonts
+   While Figtree / Bricolage Grotesque download, text shows in a system font.
+   These faces scale that system font to the real font's width, so when the
+   real one arrives the text barely moves (no layout jump). Line heights are
+   fixed in px in the tokens, so only the width needs matching.
+   --------------------------------------------------------------------- */
+/* Widths measured against the real fonts (Arial at the same weight = 100%):
+   Figtree regular 100%, Figtree semibold/bold about 96%, Bricolage bold 100%.
+   Bold needs its own face so the fallback is real bold, not smeared regular. */
+@font-face {
+  font-family: "Figtree Fallback";
+  src: local("Arial"), local("ArialMT"), local("Helvetica Neue"), local("Helvetica");
+  font-weight: 400 500;
+  size-adjust: 100%;
+}
+@font-face {
+  font-family: "Figtree Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Neue Bold"), local("Helvetica Bold");
+  font-weight: 600 800;
+  size-adjust: 96%;
+}
+@font-face {
+  font-family: "Bricolage Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Neue Bold"), local("Helvetica Bold");
+  font-weight: 400 800;
+  size-adjust: 100%;
+}
+
+/* ---------------------------------------------------------------------
+   Reset
+   --------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  background: var(--color-bg); /* so there is never a white frame between pages */
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, p, ul, ol, dl, dd, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+button, [role="button"], [role="radio"], [role="checkbox"] { cursor: pointer; }
+button:disabled { cursor: default; }
+img, svg { display: block; }
+
+/* `hidden` must always win over a class that sets `display`. */
+[hidden] { display: none !important; }
+
+/* ---------------------------------------------------------------------
+   Focus: one visible ring everywhere. Inputs show focus with a border and
+   a soft ring instead (see .field and .set-input in components.css).
+   --------------------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Type scale (matches tokens.css). Display type is the headline font:
+   screen titles and the one big number per screen.
+   --------------------------------------------------------------------- */
+.t-display { font-family: var(--font-display); font-size: var(--text-display); line-height: var(--leading-display); font-weight: 700; letter-spacing: var(--tracking-display); }
+.t-2xl     { font-family: var(--font-display); font-size: var(--text-2xl); line-height: var(--leading-2xl); font-weight: 700; letter-spacing: var(--tracking-2xl); }
+.t-xl      { font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: 700; letter-spacing: var(--tracking-xl); }
+.t-lg      { font-size: var(--text-lg); line-height: var(--leading-lg); font-weight: 600; }
+.t-md      { font-size: var(--text-md); line-height: var(--leading-md); }
+.t-sm      { font-size: var(--text-sm); line-height: var(--leading-sm); }
+.t-xs      { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 600; }
+.muted     { color: var(--color-ink-muted); }
+.strong    { font-weight: 700; }
+.accent-text { color: var(--color-accent-strong); }
+
+/* Numbers that change (sets, XP, timers) never jump around. */
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------------
+   Page shell: one centered column, 24px side margins, content starting 52px
+   from the top (the status-bar area stays empty). Pages with a tab bar or a
+   pinned footer reserve room for it through two variables, so nothing hides
+   underneath. The classes go on <body> in the HTML (not added by script)
+   so the space is there from the first frame.
+   --------------------------------------------------------------------- */
+body.has-tabbar { --tabbar-offset: var(--tabbar-h); }
+body.has-footer { --footer-offset: calc(var(--button-h) + var(--space-6)); }
+
+.page {
+  max-width: var(--page-max);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: calc(52px + env(safe-area-inset-top, 0px)) var(--space-5)
+           calc(var(--space-6) + var(--tabbar-offset, 0px) + var(--footer-offset, 0px));
+}
+
+/* A vertical stack with a consistent gap: the default way to lay out a screen. */
+.stack { display: flex; flex-direction: column; gap: var(--space-5); }
+.stack--tight { gap: var(--space-3); }
+.row { display: flex; align-items: center; gap: var(--space-3); }
+.row--between { justify-content: space-between; }
+
+/* While the very first page of a tab waits for the data files, the page body
+   is invisible; it fades in once the content is built, so there's never a
+   half-built screen. (Later pages read the data from a cache and never wait.) */
+.page { transition: opacity var(--dur-fast) var(--ease-out); }
+body[data-loading] .page { opacity: 0; }
+
+/* ---------------------------------------------------------------------
+   Page transitions
+   Browsers that support cross-document view transitions crossfade from one
+   page to the next instead of blanking. Everything named below is captured
+   separately, so it stays perfectly still while the rest crossfades.
+   Browsers without support just navigate normally.
+   --------------------------------------------------------------------- */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
+}
+
+.tabbar { view-transition-name: tabbar; }
+.workout-header { view-transition-name: workout-header; }
+
+/* In-page transitions (Rana.ui.transition): a quick slide in the direction
+   of travel, e.g. exercise to exercise. data-vt is set on <html> only while
+   the transition runs. */
+html[data-vt="forward"]::view-transition-old(root) { animation: vt-out-left var(--dur-base) var(--ease-out) both; }
+html[data-vt="forward"]::view-transition-new(root) { animation: vt-in-right var(--dur-base) var(--ease-out) both; }
+html[data-vt="back"]::view-transition-old(root) { animation: vt-out-right var(--dur-base) var(--ease-out) both; }
+html[data-vt="back"]::view-transition-new(root) { animation: vt-in-left var(--dur-base) var(--ease-out) both; }
+
+@keyframes vt-out-left  { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes vt-in-right  { from { opacity: 0; transform: translateX(24px); } }
+@keyframes vt-out-right { to { opacity: 0; transform: translateX(24px); } }
+@keyframes vt-in-left   { from { opacity: 0; transform: translateX(-24px); } }
+
+/* ---------------------------------------------------------------------
+   Reduced motion: everything is instant. (Rana.ui.transition also skips
+   the view transition itself when this is on.)
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+  }
+  @view-transition { navigation: none; }
+}

@@ -1,35 +1,62 @@
 // Reference data loader.
-// The exercise library, splits, workouts and slots are static — they ship
+// The exercise library, splits, workouts and slots are static: they ship
 // with the app and never change at runtime, so they live in data/*.json
-// (built by scripts/build_library.py) instead of localStorage. This module
-// fetches them once and caches the result in memory for the rest of the
-// page's life.
+// (built by scripts/build_library.py) instead of localStorage.
+//
+// Speed: every screen is its own page, so without a cache each tap to a new
+// screen would wait for these files again and the content would pop in.
+// Instead the raw files are kept in sessionStorage (it lives as long as the
+// browser tab). Rana.data.peek() then builds everything synchronously, so a
+// screen can render in its very first frame. After rendering, revalidate()
+// re-downloads the files in the background and, if the library was rebuilt
+// since, saves the new copy for the next screen.
 //
 // Why fetch() needs a server: browsers block fetch() against file:// URLs
-// for security reasons, so opening any page that calls Rana.data.load() by
-// double-clicking the HTML file will fail silently. Run a local server from
-// the project folder instead — `python3 -m http.server` — then visit
-// http://localhost:8000.
+// for security reasons, so opening a page by double-clicking the HTML file
+// fails. Run a local server from the project folder instead:
+// `python3 -m http.server`, then visit http://127.0.0.1:8000.
 
 window.Rana = window.Rana || {};
 
 Rana.data = (() => {
-  let cache = null;
+  const FILES = ["exercises", "splits", "workouts", "slots", "exercise_limitations"];
+  const CACHE_KEY = "rana:data-cache:v1";
+  let built = null; // the lookup maps, once built in this page
 
-  async function load() {
-    if (cache) return cache;
+  const fetchTexts = () =>
+    Promise.all(FILES.map((name) => fetch(`data/${name}.json`).then((r) => {
+      if (!r.ok) throw new Error(`Could not load data/${name}.json (${r.status})`);
+      return r.text();
+    }))).then((texts) => Object.fromEntries(FILES.map((name, i) => [name, texts[i]])));
 
-    const [exercises, splits, workouts, slotsDoc, limitationsDoc] = await Promise.all([
-      fetch("data/exercises.json").then((r) => r.json()),
-      fetch("data/splits.json").then((r) => r.json()),
-      fetch("data/workouts.json").then((r) => r.json()),
-      fetch("data/slots.json").then((r) => r.json()),
-      fetch("data/exercise_limitations.json").then((r) => r.json()),
-    ]);
+  function readCache() {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null; // storage blocked or corrupt: just fetch instead
+    }
+  }
+  function writeCache(texts) {
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(texts));
+    } catch {
+      // storage full or blocked: the cache is an optimization, never required
+    }
+  }
+
+  // Turns the raw files into the lookup maps the screens use.
+  function build(texts) {
+    const json = (name) => JSON.parse(texts[name]);
+    const exercises = json("exercises");
+    const splits = json("splits");
+    const workouts = json("workouts");
+    const slotsDoc = json("slots");
+    const limitationsDoc = json("exercise_limitations");
 
     // exercise_key -> ["knee", "lower-back", ...]. Used only to pick the
     // SUGGESTED workout's exercises around a user's reported limitations;
-    // freestyle workouts and swap buttons ignore it (see plan.js).
+    // freestyle workouts and swap options ignore it (see plan.js).
     const limitationsByExercise = new Map(Object.entries(limitationsDoc.tags));
 
     const exerciseByKey = new Map(exercises.map((e) => [e.exercise_key, e]));
@@ -59,7 +86,7 @@ Rana.data = (() => {
     });
     optionsBySlot.forEach((list) => list.sort((a, b) => a.option_rank - b.option_rank));
 
-    cache = {
+    return {
       exercises,
       splits,
       workouts,
@@ -73,11 +100,44 @@ Rana.data = (() => {
       optionsBySlot,
       limitationsByExercise,
     };
-    // The saved plan may point at a split that was since removed from the
-    // workbook; fix it before any screen reads it (see Rana.plan.repairPlan).
-    if (Rana.plan && Rana.storage) Rana.plan.repairPlan(cache);
-    return cache;
   }
 
-  return { load };
+  // Synchronous: the data if it is already available without waiting
+  // (built earlier in this page, or cached from an earlier screen), else null.
+  function peek() {
+    if (built) return built;
+    const texts = readCache();
+    if (!texts || FILES.some((name) => typeof texts[name] !== "string")) return null;
+    try {
+      built = build(texts);
+    } catch {
+      return null; // a bad cache is ignored and replaced by load()
+    }
+    return built;
+  }
+
+  // The data, waiting for the network only if nothing is cached yet.
+  async function load() {
+    const ready = peek();
+    if (ready) return ready;
+    const texts = await fetchTexts();
+    writeCache(texts);
+    built = build(texts);
+    return built;
+  }
+
+  // Background check that the cached files still match the server's. If the
+  // library was rebuilt, the new files are saved for the next screen (this
+  // screen keeps what it already rendered).
+  async function revalidate() {
+    try {
+      const fresh = await fetchTexts();
+      const cached = readCache();
+      if (!cached || FILES.some((name) => cached[name] !== fresh[name])) writeCache(fresh);
+    } catch {
+      // offline or a server hiccup: keep the cache
+    }
+  }
+
+  return { load, peek, revalidate };
 })();

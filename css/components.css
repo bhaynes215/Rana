@@ -1,0 +1,562 @@
+/*
+  Components: every reusable piece of the interface, built once.
+  The JS that creates them lives in js/core/ui.js and js/core/components.js;
+  the specs are in docs/redesign/handoff/components.md.
+
+  Rules for everything below: no gradients, glows, blur or drop shadows (the
+  one box-shadow in the app is the input focus ring), no raw colors (use the
+  tokens), and every tappable thing is at least 44 x 44.
+*/
+
+/* =====================================================================
+   Rana (the character) and speech bubbles
+   ===================================================================== */
+
+/* Width only; the height follows. The drawing is decorative (alt=""). */
+.rana { display: block; width: var(--rana-w, 116px); height: auto; aspect-ratio: 200 / 220; flex: none; }
+.rana--avatar { width: var(--avatar-tip); aspect-ratio: 1; }
+
+/* Interview: Rana beside a big bubble (questionnaire, plan reveal). The
+   bubble's bottom margin lifts it so the tail lines up with his face. */
+.interview { display: flex; align-items: flex-end; gap: 10px; }
+.interview .rana { margin-left: -8px; }
+
+.bubble {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+}
+/* The tail: a rotated square showing only its left and bottom borders. */
+.bubble::after {
+  content: "";
+  position: absolute;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  transform: rotate(45deg);
+}
+.bubble p { text-wrap: pretty; }
+
+.bubble--interview {
+  margin-bottom: 56px;
+  padding: 16px 18px;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  font-weight: 600;
+}
+.bubble--interview::after { width: 14px; height: 14px; left: -8px; bottom: 22px; }
+/* A long question drops a size so it stays a short paragraph, not a wall. */
+.bubble--long { font-size: var(--text-md); line-height: 22px; font-weight: 500; }
+
+/* Tip: a small avatar and a quiet one-line hint (every other screen). */
+.tip { display: flex; align-items: flex-start; gap: var(--space-3); }
+.tip .rana { --rana-w: var(--avatar-tip); }
+.bubble--tip {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+.bubble--tip::after { width: 12px; height: 12px; left: -7px; top: 15px; }
+.tip--workout { gap: 10px; }
+.tip--workout .rana { --rana-w: var(--avatar-workout); }
+.tip--workout .bubble--tip { padding: 8px 12px; border-radius: 14px; }
+.tip--workout .bubble--tip::after { top: 13px; }
+
+/* When an interview question changes, the new bubble fades in and rises 8px. */
+.bubble--enter { animation: bubble-in var(--dur-base) var(--ease-out) both; }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* =====================================================================
+   Progress bars. Always paired with the numbers as text.
+   ===================================================================== */
+.bar { height: 10px; border-radius: var(--radius-full); background: var(--color-line); overflow: hidden; }
+.bar__fill {
+  width: var(--fill, 0%);
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  transition: width var(--dur-base) var(--ease-out); /* only runs when the value changes */
+}
+.bar--thin { height: 6px; }                     /* onboarding */
+.bar--lift { height: 6px; background: var(--color-track-soft); }
+.bar--rest { height: 6px; }
+.bar--rest .bar__fill { background: var(--color-ink); } /* ink, so it never reads as progress toward a goal */
+
+.bar-numbers {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+}
+.bar-numbers--lift { margin-top: 6px; color: var(--color-ink-muted); }
+.bar-numbers__gain { color: var(--color-accent-strong); font-weight: 700; }
+
+.rest-row { display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); line-height: var(--leading-sm); font-variant-numeric: tabular-nums; }
+.rest-row .bar { flex: 1; }
+
+/* Exercise n of N: segments with 4px gaps. When a segment is a button it
+   keeps the 4px look but gets a 44px-tall tap area. */
+.steps { display: grid; grid-template-columns: repeat(var(--steps, 6), minmax(0, 1fr)); gap: 4px; }
+.steps__seg { position: relative; height: 4px; padding: 0; border: 0; border-radius: var(--radius-full); background: var(--color-line); transition: background-color var(--dur-base) var(--ease-out); }
+.steps__seg.is-filled { background: var(--color-accent); }
+button.steps__seg::after { content: ""; position: absolute; inset: -20px -2px; }
+
+/* The top row of the questionnaire: back button, bar, "n of 15". */
+.topbar { display: flex; align-items: center; gap: var(--space-3); height: var(--tap-min); }
+.topbar .btn--icon { margin-left: -10px; }
+.topbar .bar { flex: 1; }
+.topbar__count { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   Buttons
+   ===================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.btn:active:not(:disabled):not([aria-disabled="true"]) { transform: scale(0.98); }
+
+/* Primary: one per screen, at the bottom. Text on the accent is always ink. */
+.btn--primary { width: 100%; height: var(--button-h); background: var(--color-accent); color: var(--color-ink); font-weight: 700; }
+.btn--primary:active:not(:disabled) { background: var(--color-accent-pressed); }
+.btn--primary:disabled, .btn--primary[aria-disabled="true"] { background: var(--color-line); color: var(--color-ink-muted); }
+
+/* Secondary: the quieter path. */
+.btn--secondary { width: 100%; height: var(--button-h); background: var(--color-surface); border: 1px solid var(--color-line); }
+.btn--compact { height: var(--tap-min); }
+
+/* Text: an opt-out ("I haven't done this"), underlined. */
+.btn--text { padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+/* Action: a header action such as Finish. */
+.btn--action { padding: 0 4px; color: var(--color-accent-strong); font-weight: 700; white-space: nowrap; }
+/* Plain: a small inline action with an icon, such as Add set. */
+.btn--plain { padding: 0 4px; white-space: nowrap; }
+
+/* Icon: 44 x 44 with a 24px glyph. Always has an aria-label. */
+.btn--icon { flex: none; width: var(--tap-min); padding: 0; }
+
+/* Stacked buttons in a card or sheet. */
+.btn-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* The pinned primary action. Content scrolls under it, so it sits on chalk. */
+.footer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--tabbar-offset, 0px);
+  z-index: var(--z-footer);
+  background: var(--color-bg);
+}
+.footer-bar__inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+/* Above a tab bar the button needs less room beneath it. */
+body.has-tabbar .footer-bar__inner { padding-bottom: var(--space-4); }
+.footer-bar__inner > * + * { margin-top: 10px; }
+
+/* =====================================================================
+   Cards. Everything that isn't a card sits straight on chalk.
+   ===================================================================== */
+.card { background: var(--color-surface); }
+.card--hero { padding: var(--space-card); border-radius: var(--radius-xl); }   /* at most one per screen */
+.card--list { padding: 4px 18px; border-radius: var(--radius-lg); }
+
+.card__eyebrow { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.card__title { margin-top: 2px; }
+
+.meta-row { display: flex; flex-wrap: wrap; gap: 4px var(--space-4); margin-top: 4px; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.meta-row > span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* A plain list inside a hero card: name on the left, "3 × 6-8" on the right. */
+.exercise-list { display: flex; flex-direction: column; gap: 2px; margin-top: 14px; font-size: var(--text-md); line-height: 28px; }
+.exercise-list li { display: flex; justify-content: space-between; gap: var(--space-3); }
+.exercise-list__value { flex: none; color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+
+/* List card rows: title and subtitle on the left, a quiet value on the right. */
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-divider);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.list-row:last-child { border-bottom: 0; }
+.list-row__text { display: flex; flex-direction: column; min-width: 0; }
+.list-row__title { font-size: var(--text-md); line-height: 22px; font-weight: 600; }
+.list-row__sub { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.list-row__value { flex: none; font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+
+/* Option card: a single-choice answer. Selected gets a 2px accent border (the
+   padding shrinks by 1px so nothing shifts), a wash fill and a filled check. */
+.option-list { display: flex; flex-direction: column; gap: 10px; }
+.option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+.option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 18px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.option[aria-checked="true"] { padding: 13px 17px; border-width: 2px; border-color: var(--color-accent); background: var(--color-accent-wash); }
+.option__text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.option__label { font-size: var(--text-md); line-height: 22px; font-weight: 600; }
+.option__desc { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.option__mark {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--color-radio);
+  border-radius: 50%;
+  color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.option[aria-checked="true"] .option__mark { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-ink); }
+/* Checkbox groups (several answers allowed) use a rounded square instead. */
+.option[role="checkbox"] .option__mark { border-radius: 6px; }
+
+/* Number tile: an option card for "3 days": a big number, a word, a tag. */
+.option--tile { flex-direction: column; align-items: flex-start; gap: 6px; height: 128px; padding: 16px 18px; }
+.option--tile[aria-checked="true"] { padding: 15px 17px; }
+.option--tile .option__mark { position: absolute; top: 14px; right: 14px; }
+.tile__number { font-family: var(--font-display); font-size: var(--text-2xl); line-height: 40px; font-weight: 700; letter-spacing: var(--tracking-2xl); }
+.tile__unit { font-size: var(--text-md); line-height: 22px; font-weight: 600; }
+.tile__tag { margin-top: auto; font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 600; color: var(--color-accent-strong); }
+
+/* Collapsible ("How to do it"): the body pushes the content below it down. */
+.collapsible { background: var(--color-surface); border-radius: var(--radius-md); }
+.collapsible__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.collapsible__icon { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--color-bg); }
+.collapsible__text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.collapsible__title { font-size: var(--text-md); line-height: 22px; font-weight: 600; }
+.collapsible__sub { font-size: var(--text-sm); line-height: 18px; color: var(--color-ink-muted); }
+.collapsible__chevron { flex: none; transition: transform var(--dur-fast) var(--ease-out); }
+.collapsible__head[aria-expanded="true"] .collapsible__chevron { transform: rotate(180deg); }
+.collapsible__body { display: flex; flex-direction: column; gap: 14px; padding: 0 14px 16px; }
+
+/* The tutorial video slot. No videos exist yet, so it says so. */
+.video { position: relative; display: flex; align-items: center; justify-content: center; height: 172px; border-radius: var(--radius-sm); background: var(--color-ink); color: var(--color-surface); }
+.video__play { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: var(--color-surface); color: var(--color-ink); }
+.video__caption, .video__time { position: absolute; bottom: 10px; font-size: var(--text-sm); line-height: var(--leading-sm); }
+.video__caption { left: 12px; }
+.video__time { right: 12px; font-variant-numeric: tabular-nums; }
+.muscle-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.muscle-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: var(--radius-full); background: var(--color-bg); font-size: var(--text-sm); line-height: var(--leading-sm); }
+.muscle-chip--primary { background: var(--color-accent); }
+.section-label { font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: 700; }
+
+/* =====================================================================
+   Inputs
+   ===================================================================== */
+
+/* Onboarding field: label above, a 60px box, an optional unit inside. */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field__label { font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: 600; }
+.field__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--input-h);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.field__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;              /* the control around it shows the focus state */
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.field__input::placeholder { color: var(--color-ink-muted); font-weight: 400; }
+.field__unit { color: var(--color-ink-muted); }
+.field__error { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-danger); }
+
+/* Focus = ink border plus a soft ring. The ring is a box-shadow, the only one
+   in the app; a 1px shadow thickens the border to 2px without moving anything. */
+.field__control:focus-within,
+.set-input:focus {
+  outline: 0;
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 1px var(--color-ink), 0 0 0 4px var(--color-accent-soft);
+}
+.field--error .field__control,
+.field--error .field__control:focus-within { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+
+/* Chips: the exercise options in a slot. The row scrolls sideways and bleeds
+   off the right edge of the screen. */
+.chips {
+  display: flex;
+  gap: var(--space-2);
+  margin: -2px calc(var(--space-5) * -1) -2px 0;
+  padding: 2px var(--space-5) 2px 0; /* room for the chips' taller tap area; scrolling would clip it otherwise */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  position: relative;
+  flex: none;
+  height: var(--chip-h);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.chip::after { content: ""; position: absolute; inset: -2px 0; } /* 40px look, 44px tap area */
+.chip[aria-checked="true"] { padding: 0 15px; border-width: 2px; border-color: var(--color-accent); background: var(--color-accent-wash); }
+
+/* A solid ink chip marks only the current step ("Bench press" of three). */
+.step-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.step-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border: 1px solid var(--color-line); border-radius: var(--radius-full); color: var(--color-ink-muted); font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: 600; }
+.step-chip.is-current { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-surface); }
+
+/* The done toggle: a 44px button around a 30px circle. */
+.done { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); padding: 0; border: 0; background: transparent; -webkit-tap-highlight-color: transparent; }
+.done__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1.5px solid var(--color-radio);
+  border-radius: 50%;
+  color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.done:active .done__dot { transform: scale(0.94); }
+.done[aria-pressed="true"] .done__dot { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-ink); }
+
+/* The set table (workout logging). */
+.set-table { display: flex; flex-direction: column; gap: 6px; }
+.set-head, .set-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 80px 64px var(--tap-min);
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0 2px;
+}
+.set-head { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 600; color: var(--color-ink-muted); }
+.set-head > :last-child { text-align: center; }
+.set-row { min-height: 56px; border-radius: var(--radius-md); transition: background-color var(--dur-fast) var(--ease-out); }
+.set-row.is-active { background: var(--color-surface); }       /* the first set not done */
+.set-row__n { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.set-row__last { color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+.set-input {
+  width: 100%;
+  height: var(--input-h-set);
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-align: center;
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.set-input.is-error { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+/* A logged set drops its border and fill so finished numbers read as plain text. */
+.set-row.is-done .set-input { border-color: transparent; background: transparent; }
+
+/* =====================================================================
+   Tab bar: Today, Plan, Progress, Profile. Full width, items centered in the
+   same column as the page.
+   ===================================================================== */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-tabbar);
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+.tabbar__inner { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: var(--page-max); margin: 0 auto; }
+.tabbar__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  height: 48px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbar__tab[aria-current="page"] { color: var(--color-ink); font-weight: 700; }
+
+/* =====================================================================
+   Sheet: a panel that rises from the bottom. Confirmations, short forms and
+   the exercise picker all use it. Rana.ui.sheet / Rana.ui.confirm.
+   ===================================================================== */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-ink) 40%, transparent);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.sheet-backdrop.is-open { opacity: 1; }
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: var(--page-max);
+  max-height: 90vh;
+  max-height: 90dvh;
+  padding: var(--space-card) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--color-surface);
+  transform: translateY(32px);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.sheet-backdrop.is-open .sheet { transform: none; }
+body.sheet-open { overflow: hidden; }
+.sheet__title { font-size: var(--text-lg); line-height: var(--leading-lg); font-weight: 700; }
+.sheet__sub { margin-top: -10px; color: var(--color-ink-muted); font-size: var(--text-sm); line-height: var(--leading-sm); }
+.sheet__message { font-size: var(--text-md); line-height: var(--leading-md); }
+.sheet__actions { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* The (i) next to RPE: a small icon with a full 44px tap area. */
+.info-btn { position: relative; display: inline-flex; vertical-align: middle; width: 20px; height: 20px; margin: 0 0 0 2px; padding: 0; border: 0; background: transparent; color: var(--color-ink-muted); }
+.info-btn::after { content: ""; position: absolute; inset: -12px; }
+
+/* The RPE scale inside a sheet. */
+.scale { display: flex; flex-direction: column; }
+.scale > div { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-divider); }
+.scale > div:last-child { border-bottom: 0; }
+.scale dt { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   The week
+   ===================================================================== */
+
+/* Week strip: the plan's week as seven tall blocks (plan reveal, Plan tab). */
+.week-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.week-strip__day { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+.week-strip__name { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 600; color: var(--color-ink-muted); }
+.week-strip__block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 92px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+}
+.week-strip__block--train { background: var(--color-accent); font-weight: 700; }
+.week-strip__block--rest { border: 1.5px dashed var(--color-dashed); color: var(--color-ink-muted); font-weight: 400; }
+
+/* Week row: Today's small row of seven day markers. State is carried by the
+   marker shape and also written for screen readers, never by color alone. */
+.week-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-1); }
+.week-row > li { display: flex; }
+.week-row__day {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+}
+.week-row__letter { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 600; color: var(--color-ink-muted); }
+.week-row__day.is-today .week-row__letter { color: var(--color-ink); font-weight: 700; }
+.week-row__mark { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; color: var(--color-ink-muted); }
+.week-row__day.is-today .week-row__mark { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.week-row__mark--done { background: var(--color-accent); color: var(--color-ink); }             /* a workout was done */
+.week-row__mark--training { border: 1.5px solid var(--color-radio); }                           /* a workout is planned */
+.week-row__mark--missed { border: 1.5px solid var(--color-radio); }                             /* planned, not done */
+.week-row__mark--offplan { border: 1.5px dashed var(--color-accent); }                          /* trained something else */
+
+/* =====================================================================
+   Empty states: Rana, one line, one action.
+   ===================================================================== */
+.empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-6) 0; text-align: center; }
+.empty__text { max-width: 280px; font-weight: 600; text-wrap: pretty; }
+.empty .btn { width: auto; min-width: 200px; }

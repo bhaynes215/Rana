@@ -105,7 +105,8 @@ js/core/                 shared, loaded in this order
   progress.js           NEW: read models for Progress/Today (lift rows, weekly XP, last time)
   coach.js              NEW: progression rule + every Rana line (templates from §11)
   icons.js              NEW: Lucide icons as inline SVG strings (ISC license note in header)
-  ui.js                 el(), components, confirm/sheet, numericField, infoButton, transitions
+  ui.js                 primitives: el(), buttons, transition(), numericField, sheet/confirm, infoButton, prescription (built Phase 1)
+  components.js         visual components: rana, bubbles, bars, optionGroup, chips, collapsible, field, setRow/setTable, weekRow/weekStrip, listCard, emptyState, footerBar (built Phase 1; kept separate so no file passes ~450 lines)
   page.js               NEW: Rana.page.start() boot (see 4.3)
   nav.js                tab bar
   exercise-picker.js    picker sheet
@@ -130,6 +131,7 @@ Deleted outright: `styles.css`, `js/dashboard-state.js`, `session-detail.html/.j
 <script src="js/core/coach.js" defer></script>
 <script src="js/core/icons.js" defer></script>
 <script src="js/core/ui.js" defer></script>
+<script src="js/core/components.js" defer></script>
 <script src="js/core/page.js" defer></script>
 <script src="js/core/nav.js" defer></script>         <!-- tabbed pages only -->
 <script src="js/pages/<page>.js" defer></script>
@@ -356,7 +358,7 @@ Each phase lists **Delete → Build → Check**. "Check" always includes: zero c
 - **`ui.js`:**
   - Move `el()` here.
   - Keep and restyle `numericField`, `infoButton` (RPE only) and `confirm` (now a sheet).
-  - Add `sheet({ title, body, actions })`, `ranaPose(pose, width)`, `ranaTip(text, { size })`, `interview(text, pose)`, `progressBar({ variant, value, max, label })`, `optionCard`, `numberTile`, `chips`, `collapsible`, `weekRow`, `weekStrip`, `sessionList` and `transition(fn)`.
+  - Add `sheet({ title, body, actions })`, `ranaPose(pose, width)`, `ranaTip(text, { size })`, `interview(text, pose)`, `progressBar({ variant, value, max, label })`, `optionCard`, `numberTile`, `chips`, `collapsible`, `weekRow`, `weekStrip`, `listCard` and `transition(fn)`. (As built: primitives in `ui.js`, components in `components.js`; component names are `rana`, `interview`, `ranaTip`, `progress`/`levelBar`/`liftBar`/`restRow`/`stepsBar`/`topbar`, `optionGroup` (cards, tiles, checkboxes), `chipGroup`, `stepChips`, `field`, `setRow`/`setTable`. See the header of each file.)
   - Each returns an element and sets the correct ARIA attributes (`role="progressbar"` + values, `aria-pressed`, `aria-expanded`, `aria-current`).
 - **`js/core/page.js`:** the §4.3 boot.
 - **`data.js`:** the session cache.

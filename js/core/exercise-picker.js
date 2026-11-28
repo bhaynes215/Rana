@@ -28,12 +28,9 @@ Rana.picker = (() => {
     { name: "Core", muscles: ["Core"] },
   ];
 
-  function el(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
+  // The shared element builder (ui.js). NOTE: this picker still uses the old
+  // look's classes; Phase 6 of the redesign rebuilds it as a sheet.
+  const el = Rana.ui.el;
 
   // Compound lifts first (they're what most workouts are built around),
   // then alphabetical.

@@ -1,0 +1,41 @@
+<!doctype html>
+<!--
+  Component gallery (temporary; deleted in the last redesign phase).
+  Every component in every state, built with the real css and js of the app.
+  Open it at http://127.0.0.1:8000/docs/redesign/components.html
+  <base> makes every path below resolve from the project root.
+-->
+<html lang="en">
+<head>
+  <base href="../../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Components — Rana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400..800&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .g-section { display: flex; flex-direction: column; gap: var(--space-4); }
+    .g-section > h2 { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 700; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .g-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+    .g-row > .field { flex: 1 1 140px; }
+    .g-poses { display: flex; gap: var(--space-3); align-items: flex-end; }
+  </style>
+</head>
+<body class="has-tabbar">
+  <main class="page stack" id="main"></main>
+  <script src="js/core/data.js" defer></script>
+  <script src="js/core/storage.js" defer></script>
+  <script src="js/core/plan.js" defer></script>
+  <script src="js/core/game.js" defer></script>
+  <script src="js/core/icons.js" defer></script>
+  <script src="js/core/ui.js" defer></script>
+  <script src="js/core/components.js" defer></script>
+  <script src="js/core/page.js" defer></script>
+  <script src="js/core/nav.js" defer></script>
+  <script src="docs/redesign/components-gallery.js" defer></script>
+</body>
+</html>
