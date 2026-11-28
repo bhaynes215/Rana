@@ -586,7 +586,14 @@ const ids = Q.list.map((q) => q.id).join();
 check("15 questions, in order", ids === "name,gender,age,height,weight_current,weight_target,goal,focus_area,fitness_level,activity_level,limitations,gym_type,days,weekdays,lifts", ids);
 check("the lifts question is skipped for someone who has never trained", Q.active({ fitness_level: "never-trained" }).length === 14 && Q.active({ fitness_level: "returning" }).length === 15 && Q.active({}).length === 15);
 const val = (id, v, a = {}) => Q.byId(id).validate(v, a);
-check("age, height and weight ranges", val("age", "12") && !val("age", "21") && val("height", "") && !val("height", "178") && val("weight_current", "40") && !val("weight_current", "170"));
+check("age and weight ranges", val("age", "12") && !val("age", "21") && val("weight_current", "40") && !val("weight_current", "170"));
+// Height is typed as feet and inches and kept in centimeters.
+const hf = Q.heightFromParts;
+check("5 ft 9 in becomes 175.3 cm, and back again", hf("5", "9") === 175.3 && JSON.stringify(Q.heightParts(175.3)) === '{"feet":5,"inches":9}' && Q.formatHeight(175.3) === "5 ft 9 in");
+check("old centimeter heights show as feet and inches (178 cm = 5 ft 10 in)", Q.formatHeight(178) === "5 ft 10 in" && Q.formatHeight(165) === "5 ft 5 in");
+check("every whole foot/inch height survives the round trip", (() => { for (let f = 4; f <= 7; f++) for (let i = 0; i < 12; i++) { const p = Q.heightParts(hf(String(f), String(i))); if (p.feet !== f || p.inches !== i) return false; } return true; })());
+check("blank inches count as zero; blank feet is no answer; 12+ inches is an error", hf("6", "") === 182.9 && hf("", "9") === "" && Number.isNaN(hf("5", "12")) && Number.isNaN(hf("x", "3")));
+check("height rule: asks for feet and inches, checks the range", val("height", "") && val("height", NaN).includes("0 to 11") && val("height", hf("3", "11")) && val("height", hf("7", "7")) && !val("height", hf("4", "0")) && !val("height", hf("7", "6")) && !val("height", hf("5", "9")));
 check("target weight is optional but checked when given", !val("weight_target", "") && val("weight_target", "5") && !val("weight_target", "175"));
 check("a name is required", val("name", "  ") && !val("name", "Brennan"));
 check("limitations need an answer ('None of these' counts)", val("limitations", []) && !val("limitations", ["none"]) && !val("limitations", ["knee", "wrist"]));
@@ -596,6 +603,21 @@ check("the days helper names the recommended counts for the level", Q.byId("days
 const qProfile = Q.toProfile({ name: " Brennan ", age: "21", height: "178", weight_current: "170", weight_target: "", limitations: ["none"], training_days_per_week: 4, training_weekdays: ["Mon"], starting_lifts: { bench: { skipped: true } } });
 check("answers become a profile: numbers, no 'none' limitation, a trimmed name, no empty target", qProfile.name === "Brennan" && qProfile.age === 21 && qProfile.weight_target === null && qProfile.limitations.length === 0 && qProfile.starting_lifts.bench.skipped === true && Boolean(qProfile.created_at));
 check("lift names read well in a sentence", Q.liftName({ exercise_name: "Barbell Incline Bench Press" }) === "incline bench press" && Q.liftName({ exercise_name: "Leg Press" }) === "leg press" && Q.liftLabel({ exercise_name: "Barbell Back Squat" }) === "Back squat");
+
+// The coach chose not to ask about the incline bench or the leg press.
+const askedLifts = Rana.plan.liftsToAskAbout([{ exercise_key: "incline_bb" }, { exercise_key: "back_squat" }, { exercise_key: "leg_press" }, { exercise_key: "weighted_pullup" }]);
+check("the lifts question skips incline bench and leg press only", askedLifts.map((l) => l.exercise_key).join() === "back_squat,weighted_pullup");
+
+// Rana's effort advice: go light on what loads a sensitive joint, otherwise near failure.
+const kneeProfile = { limitations: ["knee"] };
+const squatTip = Rana.coach.effortNote("back_squat", { data, profile: kneeProfile });
+const curlTip = Rana.coach.effortNote("bb_curl", { data, profile: kneeProfile });
+const noneTip = Rana.coach.effortNote("back_squat", { data, profile: { limitations: [] } });
+check("a sensitive knee means go light on a squat", squatTip && squatTip.kind === "go-light" && /knee is sensitive/.test(squatTip.text) && /go light/.test(squatTip.text), squatTip && squatTip.text);
+check("a sensitive knee means go light on lunges too", Rana.coach.effortNote("walking_lunge", { data, profile: kneeProfile }).kind === "go-light");
+check("a movement that doesn't load the sensitive joint: take it close to failure", curlTip && curlTip.kind === "near-failure" && /close to failure/.test(curlTip.text), curlTip && curlTip.text);
+check("with nothing sensitive, every exercise is near-failure", noneTip.kind === "near-failure");
+check("an unknown exercise gives no note", Rana.coach.effortNote("nope", { data, profile: kneeProfile }) === null);
 
 // ---------- 12. Names and the week for the plan reveal ----------
 console.log("");

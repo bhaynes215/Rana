@@ -45,10 +45,11 @@
   }
 
   // A small coaching tip: avatar plus one short, specific line.
-  // Pass { workout: true } for the smaller version used during a workout.
-  function ranaTip(text, { workout = false } = {}) {
+  // Pass { workout: true } for the smaller version used during a workout, and
+  // { extra: "..." } for a second line in the same bubble.
+  function ranaTip(text, { workout = false, extra = null } = {}) {
     const bubbleText = el("p", "", text);
-    const root = el("div", workout ? "tip tip--workout" : "tip", [rana("avatar"), el("div", "bubble bubble--tip", bubbleText)]);
+    const root = el("div", workout ? "tip tip--workout" : "tip", [rana("avatar"), el("div", "bubble bubble--tip", [bubbleText, extra ? el("p", "bubble__extra", extra) : null])]);
     root.setText = (next) => { bubbleText.textContent = next; };
     return root;
   }

@@ -86,7 +86,8 @@ Rana.workoutView = (() => {
           tempo && el("p", "t-sm muted", tempo),
         ],
       });
-      const tip = Rana.ui.ranaTip(suggestion.text, { workout: true });
+      const effort = Rana.coach.effortNote(key, { data, profile: env.profile });
+      const tip = Rana.ui.ranaTip(suggestion.text, { workout: true, extra: effort && effort.text });
 
       // ---- The set table ------------------------------------------------------------
       const table = Rana.ui.setTable({ label: `${exercise ? exercise.exercise_name : key} sets` });

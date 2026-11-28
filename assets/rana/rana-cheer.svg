@@ -2,8 +2,6 @@
 <path d="M58 160L22 148M142 160L178 148" stroke="#E3B08A" stroke-width="25" stroke-linecap="round" fill="none"/>
 <path d="M22 148L24 100M178 148L176 100" stroke="#E3B08A" stroke-width="22" stroke-linecap="round" fill="none"/>
 <circle cx="24" cy="96" r="13" fill="#E3B08A"/><circle cx="176" cy="96" r="13" fill="#E3B08A"/>
-<ellipse cx="40" cy="140" rx="13.5" ry="10.5" transform="rotate(-12 40 140)" fill="#E3B08A"/><ellipse cx="160" cy="140" rx="13.5" ry="10.5" transform="rotate(12 160 140)" fill="#E3B08A"/>
-<circle cx="58" cy="160" r="15" fill="#E3B08A"/><circle cx="142" cy="160" r="15" fill="#E3B08A"/>
 
 <path d="M88 106h24v34H88z" fill="#C98E66"/>
 <path d="M60 162C62 147 78 137 100 137C122 137 138 147 140 162Z" fill="#E3B08A"/>

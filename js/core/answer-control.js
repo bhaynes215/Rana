@@ -31,6 +31,18 @@ Rana.answerControl = (question, answers, { onChange, onEnter } = {}) => {
     read = () => field.getValue();
     showError = (message) => field.setError(message);
     focus = field.input;
+  } else if (q.type === "height") {
+    // Two boxes, feet and inches. The answer is one number in centimeters
+    // (see questions.js); "" until feet are filled in.
+    const known = answers[q.field] !== "" && answers[q.field] !== null && answers[q.field] !== undefined && Number(answers[q.field]) > 0;
+    const parts = known ? Rana.questions.heightParts(answers[q.field]) : null;
+    const feet = Rana.ui.field({ label: "Feet", unit: "ft", value: parts ? String(parts.feet) : "", onEnter });
+    const inches = Rana.ui.field({ label: "Inches", unit: "in", decimal: true, value: parts ? String(parts.inches) : "", onEnter });
+    area.append(el("div", "q-fields", [feet, inches]));
+    read = () => Rana.questions.heightFromParts(feet.getValue(), inches.getValue());
+    showError = (message) => feet.setError(message);
+    inches.input.addEventListener("input", () => feet.setError(null)); // a typing change clears the message
+    focus = feet.input;
   } else if (q.type === "single" || q.type === "days") {
     const group = Rana.ui.optionGroup({
       label: q.label,

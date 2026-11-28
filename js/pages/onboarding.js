@@ -40,7 +40,7 @@ Rana.page.start({
       if (liftCache.key !== key) {
         const splitId = Rana.plan.matchSplit(profile, data.splits);
         const weekdayMap = Rana.plan.buildWeekdayMap(data.workoutsBySplit.get(splitId) || [], profile.training_weekdays);
-        liftCache = { key, lifts: Rana.plan.mainLifts({ weekday_map: weekdayMap }, data, profile) };
+        liftCache = { key, lifts: Rana.plan.liftsToAskAbout(Rana.plan.mainLifts({ weekday_map: weekdayMap }, data, profile)) };
       }
       return liftCache.lifts;
     }
@@ -219,7 +219,7 @@ Rana.page.start({
       const weekdayMap = Rana.plan.buildWeekdayMap(data.workoutsBySplit.get(splitId) || [], profile.training_weekdays);
 
       // Keep answers only for the lifts that plan actually has (an earlier answer may have changed).
-      const mainKeys = new Set(Rana.plan.mainLifts({ weekday_map: weekdayMap }, data, profile).map((l) => l.exercise_key));
+      const mainKeys = new Set(Rana.plan.liftsToAskAbout(Rana.plan.mainLifts({ weekday_map: weekdayMap }, data, profile)).map((l) => l.exercise_key));
       profile.starting_lifts = Object.fromEntries(Object.entries(answers.starting_lifts).filter(([key]) => mainKeys.has(key)));
 
       Rana.storage.saveProfile(profile);

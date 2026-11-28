@@ -61,6 +61,7 @@
   line-height: var(--leading-sm);
 }
 .bubble--tip::after { width: 12px; height: 12px; left: -7px; top: 15px; }
+.bubble__extra { margin-top: 6px; }
 .tip--workout { gap: 10px; }
 .tip--workout .rana { --rana-w: var(--avatar-workout); }
 .tip--workout .bubble--tip { padding: 8px 12px; border-radius: 14px; }

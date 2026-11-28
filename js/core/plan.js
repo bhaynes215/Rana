@@ -473,6 +473,15 @@ Rana.plan = (() => {
     return lifts;
   }
 
+  // Main lifts the questionnaire (and Profile's "Starting lifts") don't ask
+  // about: the coach chose not to. They are still tracked on Progress, so
+  // their first target comes from the first 3 logged sessions instead.
+  const LIFTS_NOT_ASKED = new Set(["incline_bb", "leg_press"]);
+
+  function liftsToAskAbout(lifts) {
+    return lifts.filter((lift) => !LIFTS_NOT_ASKED.has(lift.exercise_key));
+  }
+
   // The exercises that can have a lift target (and pay the target bonus): any
   // exercise offered for the FIRST slot of any workout day in the library.
   // Using the whole library, not the user's current plan, keeps XP stable: if
@@ -554,6 +563,7 @@ Rana.plan = (() => {
     pickSuggestedOption,
     suggestWorkout,
     mainLifts,
+    liftsToAskAbout,
     targetLiftKeys,
     dayTitle,
     shortSplitName,

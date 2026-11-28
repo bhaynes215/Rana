@@ -5,7 +5,7 @@
 //
 // Each question:
 //   id, field    the question's name, and the profile field its answer is saved to
-//   type         "text" | "number" | "single" | "multi" | "days" | "weekdays" | "lifts"
+//   type         "text" | "number" | "height" | "single" | "multi" | "days" | "weekdays" | "lifts"
 //   pose         which Rana drawing asks it (wave, think, neutral, cheer)
 //   prompt(a)    what Rana says; `a` is the answers so far (his words after the first
 //                question use the name)
@@ -27,6 +27,45 @@ Rana.questions = (() => {
     return value !== "" && value !== null && value !== undefined && n >= min && n <= max ? null : message;
   };
   const pickOne = () => "Pick one.";
+
+  // ---- Height: typed as feet and inches, saved as centimeters ---------------
+  // Everything that uses height (the calorie math) works in centimeters, so
+  // the answer is converted once, when it is read from the two boxes. Going
+  // back the other way (to fill the boxes) rounds to the nearest inch, which
+  // returns exactly what the person typed.
+  const CM_PER_INCH = 2.54;
+  const MIN_HEIGHT_CM = 4 * 12 * CM_PER_INCH; // 4 ft 0 in
+  const MAX_HEIGHT_CM = 7.5 * 12 * CM_PER_INCH; // 7 ft 6 in
+
+  // cm -> { feet: 5, inches: 9 }
+  function heightParts(cm) {
+    const totalInches = Math.round(Number(cm) / CM_PER_INCH);
+    return { feet: Math.floor(totalInches / 12), inches: totalInches % 12 };
+  }
+
+  // "5", "9" -> 175.3 (cm). A blank feet box is "no answer yet" (""), and
+  // inches left blank count as 0 ("6" ft alone is fine). Anything that isn't
+  // a sensible number gives NaN, which the rule below turns into a message.
+  function heightFromParts(feet, inches) {
+    if (feet === "" || feet === null || feet === undefined) return "";
+    const f = Number(feet);
+    const i = inches === "" || inches === null || inches === undefined ? 0 : Number(inches);
+    if (!Number.isFinite(f) || !Number.isFinite(i) || f < 0 || i < 0 || i >= 12) return NaN;
+    return Math.round((f * 12 + i) * CM_PER_INCH * 10) / 10;
+  }
+
+  // 175.3 -> "5 ft 9 in" (Profile shows it this way)
+  function formatHeight(cm) {
+    const { feet, inches } = heightParts(cm);
+    return `${feet} ft ${inches} in`;
+  }
+
+  function heightRule(value) {
+    if (value === "" || value === null || value === undefined) return "Enter your height in feet and inches, like 5 ft 9 in.";
+    if (Number.isNaN(value)) return "Inches go from 0 to 11. Enter your height like 5 ft 9 in.";
+    if (value < MIN_HEIGHT_CM - 0.05 || value > MAX_HEIGHT_CM + 0.05) return "Enter a height between 4 ft 0 in and 7 ft 6 in.";
+    return null;
+  }
 
   const WEEKDAYS = [
     { value: "Mon", label: "Monday" },
@@ -72,10 +111,11 @@ Rana.questions = (() => {
       validate: numberRule(13, 100, "Enter an age between 13 and 100."),
     },
     {
-      id: "height", field: "height", type: "number", pose: "neutral",
+      // Typed as feet and inches; the answer (and the saved profile) is in cm.
+      id: "height", field: "height", type: "height", pose: "neutral",
       prompt: () => "How tall are you?",
-      label: "Height", unit: "cm", min: 120, max: 230,
-      validate: numberRule(120, 230, "Enter a height between 120 and 230 cm."),
+      label: "Height",
+      validate: heightRule,
     },
     {
       id: "weight_current", field: "weight_current", type: "number", pose: "neutral",
@@ -239,5 +279,5 @@ Rana.questions = (() => {
     };
   }
 
-  return { list, byId, active, liftName, liftLabel, toProfile, WEEKDAYS };
+  return { list, byId, active, liftName, liftLabel, toProfile, heightParts, heightFromParts, formatHeight, WEEKDAYS };
 })();

@@ -73,6 +73,12 @@ Rana.coach = (() => {
       calibrating: "Still finding your {exercise} weight. Try {weight} lb and see how the reps feel.",
     },
 
+    // How hard to push an exercise, given the joints the user said are sensitive.
+    effort: {
+      nearFailure: "Take your last set of {exercise} close to failure, or all the way.",
+      goLight: "Your {joint} is sensitive, so go light on {exercise}. Keep it smooth and stop well short of failure.",
+    },
+
     summary: {
       targetHit: "That's your {exercise} target: {value} {unit}. Next one is {next} {unit}.",
       levelUp: "Level {n}. Showing up is paying off.",
@@ -181,6 +187,20 @@ Rana.coach = (() => {
     return { kind: "hold-reps", weight: lastWeight, text: fill(LINES.tip.holdReps, values) };
   }
 
+  // How hard to push one exercise. If it loads a joint the user listed as
+  // sensitive (data/exercise_limitations.json), go light; if it doesn't, take
+  // the last set close to failure, or all the way. Returns { kind, text }.
+  function effortNote(exerciseKey, { data, profile }) {
+    const exercise = data.exerciseByKey.get(exerciseKey);
+    if (!exercise) return null;
+    const limits = Rana.plan.activeLimitations(profile);
+    const joints = (data.limitationsByExercise.get(exerciseKey) || []).filter((j) => limits.includes(j));
+    if (joints.length) {
+      return { kind: "go-light", text: fill(LINES.effort.goLight, { exercise: exercise.exercise_name, joint: joints[0].replace("-", " ") }) };
+    }
+    return { kind: "near-failure", text: fill(LINES.effort.nearFailure, { exercise: exercise.exercise_name }) };
+  }
+
   // ---------------------------------------------------------------------
   // Screen-level lines
   // ---------------------------------------------------------------------
@@ -287,5 +307,5 @@ Rana.coach = (() => {
     return fill(LINES.planReveal, { name, goal: LINES.goalPhrase[goal] || "your goals", days });
   }
 
-  return { COACH_RULES, LINES, fill, shortWorkoutName, suggestion, todayTip, progressTip, summaryLine, streakLine, planRevealLine };
+  return { COACH_RULES, LINES, fill, shortWorkoutName, suggestion, effortNote, todayTip, progressTip, summaryLine, streakLine, planRevealLine };
 })();

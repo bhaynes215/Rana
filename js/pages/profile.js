@@ -75,6 +75,7 @@ Rana.page.start({
         const days = Rana.plan.WEEKDAY_ORDER.filter((d) => (v || []).includes(d));
         return `${days.length} days · ${days.join(", ")}`;
       }
+      if (q.type === "height") return v ? questions.formatHeight(v) : "—";
       if (v === null || v === undefined || v === "") return q.optional ? "Not set" : "—";
       return q.unit ? `${v} ${q.unit}` : String(v);
     }
@@ -131,7 +132,7 @@ Rana.page.start({
 
     // ---- Starting lifts -----------------------------------------------------------------------------
     const ranaPlan = Rana.storage.getSavedPlans().rana || ctx.plan;
-    const lifts = Rana.plan.mainLifts(ranaPlan, data, profile);
+    const lifts = Rana.plan.liftsToAskAbout(Rana.plan.mainLifts(ranaPlan, data, profile));
 
     function answerText(lift) {
       const a = profile.starting_lifts[lift.exercise_key];
@@ -176,7 +177,7 @@ Rana.page.start({
       });
     }
 
-    const liftsSection = el("section", "profile-section", [
+    const liftsSection = !lifts.length ? null : el("section", "profile-section", [
       el("h2", "profile-heading", "Starting lifts"),
       el("p", "t-sm muted", "The recent sets behind your lift targets on Progress."),
       el("ul", "card card--list", lifts.map((lift) => {

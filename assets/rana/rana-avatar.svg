@@ -3,7 +3,6 @@
 <g clip-path="url(#rana-avatar-clip)">
 <rect x="40" y="34" width="120" height="120" fill="#FCE9C6"/>
 <path d="M56 158Q49 188 50 226M144 158Q151 188 150 226" stroke="#E3B08A" stroke-width="24" stroke-linecap="round" fill="none"/>
-<circle cx="58" cy="160" r="15" fill="#E3B08A"/><circle cx="142" cy="160" r="15" fill="#E3B08A"/>
 <path d="M88 106h24v34H88z" fill="#C98E66"/>
 <path d="M60 162C62 147 78 137 100 137C122 137 138 147 140 162Z" fill="#E3B08A"/>
 

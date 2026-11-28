@@ -1,12 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" width="200" height="220" role="img" aria-label="Rana">
 <path d="M56 158Q49 188 50 226" stroke="#E3B08A" stroke-width="24" stroke-linecap="round" fill="none"/>
-<ellipse cx="50" cy="192" rx="13" ry="17" fill="#E3B08A"/>
 <path d="M142 160L174 128" stroke="#E3B08A" stroke-width="25" stroke-linecap="round" fill="none"/>
 <path d="M174 128L168 88" stroke="#E3B08A" stroke-width="22" stroke-linecap="round" fill="none"/>
-<ellipse cx="154" cy="139" rx="15" ry="11" transform="rotate(-45 154 139)" fill="#E3B08A"/>
 <circle cx="168" cy="82" r="13" fill="#E3B08A"/>
 <path d="M188 68c5 5 5 13 1 19M195 60c8 8 8 22 1 31" stroke="#F4A51C" stroke-width="3" stroke-linecap="round" fill="none"/>
-<circle cx="58" cy="160" r="15" fill="#E3B08A"/><circle cx="142" cy="160" r="15" fill="#E3B08A"/>
 
 <path d="M88 106h24v34H88z" fill="#C98E66"/>
 <path d="M60 162C62 147 78 137 100 137C122 137 138 147 140 162Z" fill="#E3B08A"/>
