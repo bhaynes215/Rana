@@ -32,7 +32,7 @@ const ctx = {
 };
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const f of ["storage.js", "plan.js", "game.js"]) {
+for (const f of ["js/core/storage.js", "js/core/plan.js", "js/core/game.js"]) {
   vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx);
 }
 const { Rana } = ctx;
